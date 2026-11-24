@@ -1,9 +1,21 @@
 package com.enterprise.ticket.service;
 
+import com.enterprise.ticket.constant.TicketChannel;
 import com.enterprise.ticket.constant.TicketPriority;
 import com.enterprise.ticket.constant.TicketStatus;
+import com.enterprise.ticket.constant.UserType;
+import com.enterprise.ticket.model.Asset;
+import com.enterprise.ticket.model.Category;
+import com.enterprise.ticket.model.Organization;
+import com.enterprise.ticket.model.Site;
+import com.enterprise.ticket.model.Subcategory;
 import com.enterprise.ticket.model.Ticket;
 import com.enterprise.ticket.model.User;
+import com.enterprise.ticket.repository.AssetRepository;
+import com.enterprise.ticket.repository.CategoryRepository;
+import com.enterprise.ticket.repository.OrganizationRepository;
+import com.enterprise.ticket.repository.SiteRepository;
+import com.enterprise.ticket.repository.SubcategoryRepository;
 import com.enterprise.ticket.repository.TicketRepository;
 import com.enterprise.ticket.repository.UserRepository;
 import com.enterprise.ticket.request.CreateTicketRequest;
@@ -16,7 +28,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service managing ticket lifecycle with internal business validation.
+ * Service managing ticket lifecycle with read/write transaction boundaries
+ * and data-scope authorization validations (FR-003, FR-004, FR-005).
  */
 @Service
 @RequiredArgsConstructor
@@ -24,8 +37,17 @@ public class TicketService {
 
   private final TicketRepository ticketRepository;
   private final UserRepository userRepository;
+  private final OrganizationRepository organizationRepository;
+  private final SiteRepository siteRepository;
+  private final AssetRepository assetRepository;
+  private final CategoryRepository categoryRepository;
+  private final SubcategoryRepository subcategoryRepository;
   private final TicketNumberGenerator ticketNumberGenerator;
 
+  /**
+   * Write Transaction: Validates authorization scope (organization, site, asset, category)
+   * and creates a new ticket.
+   */
   @Transactional
   public TicketResponse createTicket(CreateTicketRequest request, String reporterUsername) {
     validateCreateTicketRequest(request);
@@ -35,6 +57,82 @@ public class TicketService {
             .findByUsername(reporterUsername)
             .orElseThrow(() -> new IllegalArgumentException("User not found: " + reporterUsername));
 
+    // FR-004: Validate organization scope
+    Organization organization = null;
+    Long orgId = request.getOrganizationId();
+    if (orgId != null) {
+      organization =
+          organizationRepository
+              .findById(orgId)
+              .orElseThrow(
+                  () -> new IllegalArgumentException("Organization not found with ID: " + orgId));
+
+      validateUserOrganizationAccess(reporter, organization);
+    }
+
+    // FR-004: Validate site scope
+    Site site = null;
+    Long siteId = request.getSiteId();
+    if (siteId != null) {
+      if (organization == null) {
+        throw new IllegalArgumentException("Site requires an Organization to be selected");
+      }
+      site =
+          siteRepository
+              .findByIdAndOrganizationId(siteId, orgId)
+              .orElseThrow(
+                  () ->
+                      new IllegalArgumentException(
+                          "Selected Site does not belong to Organization ID: " + orgId));
+    }
+
+    // FR-004: Validate asset scope
+    Asset asset = null;
+    Long assetId = request.getAssetId();
+    if (assetId != null) {
+      if (organization == null) {
+        throw new IllegalArgumentException("Asset requires an Organization to be selected");
+      }
+      asset =
+          assetRepository
+              .findByIdAndOrganizationId(assetId, orgId)
+              .orElseThrow(
+                  () ->
+                      new IllegalArgumentException(
+                          "Selected Asset does not belong to Organization ID: " + orgId));
+
+      if (site != null && asset.getSite() != null && !asset.getSite().getId().equals(site.getId())) {
+        throw new IllegalArgumentException(
+            "Selected Asset does not belong to Site ID: " + site.getId());
+      }
+    }
+
+    // FR-005: Validate category and subcategory
+    Category category = null;
+    Long catId = request.getCategoryId();
+    if (catId != null) {
+      category =
+          categoryRepository
+              .findById(catId)
+              .orElseThrow(
+                  () -> new IllegalArgumentException("Category not found with ID: " + catId));
+    }
+
+    Subcategory subcategory = null;
+    Long subcatId = request.getSubcategoryId();
+    if (subcatId != null) {
+      if (category == null) {
+        throw new IllegalArgumentException("Subcategory requires a Category to be selected");
+      }
+      subcategory =
+          subcategoryRepository
+              .findByIdAndCategoryId(subcatId, catId)
+              .orElseThrow(
+                  () ->
+                      new IllegalArgumentException(
+                          "Selected Subcategory does not belong to Category ID: " + catId));
+    }
+
     String generatedNumber = ticketNumberGenerator.generateTicketNumber();
 
     Ticket ticket =
@@ -43,18 +141,23 @@ public class TicketService {
             .title(request.getTitle().trim())
             .description(request.getDescription().trim())
             .priority(request.getPriority() != null ? request.getPriority() : TicketPriority.MEDIUM)
-            .category(
-                request.getCategory() != null && !request.getCategory().isBlank()
-                    ? request.getCategory().trim()
-                    : "GENERAL")
+            .channel(request.getChannel() != null ? request.getChannel() : TicketChannel.WEB)
             .status(TicketStatus.OPEN)
             .reporter(reporter)
+            .organization(organization)
+            .site(site)
+            .asset(asset)
+            .category(category)
+            .subcategory(subcategory)
             .build();
 
     ticket = ticketRepository.save(ticket);
     return toTicketResponse(ticket);
   }
 
+  /**
+   * Read-Only Transaction: Optimizes JDBC performance and disables dirty checks.
+   */
   @Transactional(readOnly = true)
   public TicketResponse getTicketByNumber(String ticketNumber) {
     if (ticketNumber == null || ticketNumber.trim().isEmpty()) {
@@ -68,6 +171,9 @@ public class TicketService {
     return toTicketResponse(ticket);
   }
 
+  /**
+   * Read-Only Transaction: Paginated search for user tickets.
+   */
   @Transactional(readOnly = true)
   public Page<TicketResponse> getMyTickets(String reporterUsername, Pageable pageable) {
     User reporter =
@@ -77,6 +183,28 @@ public class TicketService {
     return ticketRepository
         .findByReporterId(reporter.getId(), pageable)
         .map(this::toTicketResponse);
+  }
+
+  /**
+   * FR-004: Enforces that external customers can only raise tickets for their own organization.
+   */
+  private void validateUserOrganizationAccess(User user, Organization organization) {
+    if (user.getUserType() == UserType.EXTERNAL_CUSTOMER) {
+      boolean matchesOrgName =
+          user.getOrganizationName() != null
+              && user.getOrganizationName().equalsIgnoreCase(organization.getName());
+
+      boolean matchesOrgList =
+          user.getOrganizations() != null
+              && user.getOrganizations().stream()
+                  .anyMatch(org -> org.getId().equals(organization.getId()));
+
+      if (!matchesOrgName && !matchesOrgList) {
+        throw new IllegalArgumentException(
+            "Access denied: User is not authorized to create tickets for organization: "
+                + organization.getName());
+      }
+    }
   }
 
   private void validateCreateTicketRequest(CreateTicketRequest request) {
@@ -99,10 +227,14 @@ public class TicketService {
         .description(ticket.getDescription())
         .status(ticket.getStatus())
         .priority(ticket.getPriority())
-        .category(ticket.getCategory())
+        .channel(ticket.getChannel())
         .reporterUsername(ticket.getReporter() != null ? ticket.getReporter().getUsername() : null)
-        .reporterOrganization(
-            ticket.getReporter() != null ? ticket.getReporter().getOrganizationName() : null)
+        .organizationName(ticket.getOrganization() != null ? ticket.getOrganization().getName() : null)
+        .siteName(ticket.getSite() != null ? ticket.getSite().getName() : null)
+        .assetTag(ticket.getAsset() != null ? ticket.getAsset().getAssetTag() : null)
+        .assetName(ticket.getAsset() != null ? ticket.getAsset().getName() : null)
+        .categoryName(ticket.getCategory() != null ? ticket.getCategory().getName() : null)
+        .subcategoryName(ticket.getSubcategory() != null ? ticket.getSubcategory().getName() : null)
         .createdAt(ticket.getCreatedAt())
         .updatedAt(ticket.getUpdatedAt())
         .build();

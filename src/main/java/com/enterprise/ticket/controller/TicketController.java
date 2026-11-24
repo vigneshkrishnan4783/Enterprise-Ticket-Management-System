@@ -45,8 +45,8 @@ public class TicketController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-  @GetMapping("/my")
-  @Operation(summary = "Get my tickets", description = "Returns paginated list of tickets reported by authenticated user")
+  @GetMapping("/ticket")
+  @Operation(summary = "Get  tickets", description = "Returns paginated list of tickets reported by authenticated user")
   public ResponseEntity<ApiResponse<Page<TicketResponse>>> getMyTickets(
       Principal principal, @PageableDefault(size = 20) Pageable pageable) {
     Page<TicketResponse> response = ticketService.getMyTickets(principal.getName(), pageable);

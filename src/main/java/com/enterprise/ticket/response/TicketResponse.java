@@ -1,5 +1,6 @@
 package com.enterprise.ticket.response;
 
+import com.enterprise.ticket.constant.TicketChannel;
 import com.enterprise.ticket.constant.TicketPriority;
 import com.enterprise.ticket.constant.TicketStatus;
 import java.time.Instant;
@@ -20,9 +21,17 @@ public class TicketResponse {
   private String description;
   private TicketStatus status;
   private TicketPriority priority;
-  private String category;
+  private TicketChannel channel;
+
   private String reporterUsername;
-  private String reporterOrganization;
+  private String organizationName;
+  private String siteName;
+  private String assetTag;
+  private String assetName;
+
+  private String categoryName;
+  private String subcategoryName;
+
   private Instant createdAt;
   private Instant updatedAt;
 }

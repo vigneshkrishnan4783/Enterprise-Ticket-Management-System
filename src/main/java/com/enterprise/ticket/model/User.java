@@ -68,4 +68,12 @@ public class User extends BaseEntity {
       inverseJoinColumns = @JoinColumn(name = "role_id"))
   @Builder.Default
   private Set<Role> roles = new HashSet<>();
+
+  @ManyToMany(fetch = FetchType.LAZY)
+  @JoinTable(
+      name = "user_organizations",
+      joinColumns = @JoinColumn(name = "user_id"),
+      inverseJoinColumns = @JoinColumn(name = "organization_id"))
+  @Builder.Default
+  private Set<Organization> organizations = new HashSet<>();
 }

@@ -1,5 +1,6 @@
 package com.enterprise.ticket.model;
 
+import com.enterprise.ticket.constant.TicketChannel;
 import com.enterprise.ticket.constant.TicketPriority;
 import com.enterprise.ticket.constant.TicketStatus;
 import jakarta.persistence.Column;
@@ -51,11 +52,32 @@ public class Ticket extends BaseEntity {
   @Builder.Default
   private TicketPriority priority = TicketPriority.MEDIUM;
 
-  @Column(name = "category", nullable = false, length = 100)
+  @Enumerated(EnumType.STRING)
+  @Column(name = "channel", nullable = false, length = 50)
   @Builder.Default
-  private String category = "GENERAL";
+  private TicketChannel channel = TicketChannel.WEB;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "reporter_id", nullable = false)
   private User reporter;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "organization_id")
+  private Organization organization;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "site_id")
+  private Site site;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "asset_id")
+  private Asset asset;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "category_id")
+  private Category category;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "subcategory_id")
+  private Subcategory subcategory;
 }
