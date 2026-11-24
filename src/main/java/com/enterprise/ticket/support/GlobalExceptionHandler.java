@@ -26,13 +26,8 @@ public class GlobalExceptionHandler {
               String errorMessage = error.getDefaultMessage();
               errors.put(fieldName, errorMessage);
             });
-    ApiResponse<Map<String, String>> response =
-        ApiResponse.<Map<String, String>>builder()
-            .success(false)
-            .message("Validation failed")
-            .data(errors)
-            .build();
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        .body(ApiResponse.error("Validation failed", errors));
   }
 
   @ExceptionHandler(BadCredentialsException.class)
