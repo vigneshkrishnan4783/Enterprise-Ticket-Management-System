@@ -1,0 +1,102 @@
+package com.enterprise.ticket.service.impl;
+
+import com.enterprise.ticket.constant.TicketPriority;
+import com.enterprise.ticket.constant.TicketStatus;
+import com.enterprise.ticket.model.Ticket;
+import com.enterprise.ticket.model.User;
+import com.enterprise.ticket.repository.TicketRepository;
+import com.enterprise.ticket.repository.UserRepository;
+import com.enterprise.ticket.request.CreateTicketRequest;
+import com.enterprise.ticket.response.TicketResponse;
+import com.enterprise.ticket.service.TicketService;
+import com.enterprise.ticket.support.TicketNumberGenerator;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class TicketServiceImpl implements TicketService {
+
+  private final TicketRepository ticketRepository;
+  private final UserRepository userRepository;
+  private final TicketNumberGenerator ticketNumberGenerator;
+
+  public TicketServiceImpl(
+      TicketRepository ticketRepository,
+      UserRepository userRepository,
+      TicketNumberGenerator ticketNumberGenerator) {
+    this.ticketRepository = ticketRepository;
+    this.userRepository = userRepository;
+    this.ticketNumberGenerator = ticketNumberGenerator;
+  }
+
+  @Override
+  @Transactional
+  public TicketResponse createTicket(CreateTicketRequest request, String reporterUsername) {
+    User reporter =
+        userRepository
+            .findByUsername(reporterUsername)
+            .orElseThrow(() -> new IllegalArgumentException("User not found: " + reporterUsername));
+
+    String generatedNumber = ticketNumberGenerator.generateTicketNumber();
+
+    Ticket ticket =
+        Ticket.builder()
+            .ticketNumber(generatedNumber)
+            .title(request.getTitle())
+            .description(request.getDescription())
+            .priority(request.getPriority() != null ? request.getPriority() : TicketPriority.MEDIUM)
+            .category(
+                request.getCategory() != null && !request.getCategory().isBlank()
+                    ? request.getCategory()
+                    : "GENERAL")
+            .status(TicketStatus.OPEN)
+            .reporter(reporter)
+            .build();
+
+    ticket = ticketRepository.save(ticket);
+    return toTicketResponse(ticket);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public TicketResponse getTicketByNumber(String ticketNumber) {
+    Ticket ticket =
+        ticketRepository
+            .findByTicketNumber(ticketNumber)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException("Ticket not found with number: " + ticketNumber));
+    return toTicketResponse(ticket);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Page<TicketResponse> getMyTickets(String reporterUsername, Pageable pageable) {
+    User reporter =
+        userRepository
+            .findByUsername(reporterUsername)
+            .orElseThrow(() -> new IllegalArgumentException("User not found: " + reporterUsername));
+    return ticketRepository
+        .findByReporterId(reporter.getId(), pageable)
+        .map(this::toTicketResponse);
+  }
+
+  private TicketResponse toTicketResponse(Ticket ticket) {
+    return TicketResponse.builder()
+        .id(ticket.getId())
+        .ticketNumber(ticket.getTicketNumber())
+        .title(ticket.getTitle())
+        .description(ticket.getDescription())
+        .status(ticket.getStatus())
+        .priority(ticket.getPriority())
+        .category(ticket.getCategory())
+        .reporterUsername(ticket.getReporter() != null ? ticket.getReporter().getUsername() : null)
+        .reporterOrganization(
+            ticket.getReporter() != null ? ticket.getReporter().getOrganizationName() : null)
+        .createdAt(ticket.getCreatedAt())
+        .updatedAt(ticket.getUpdatedAt())
+        .build();
+  }
+}

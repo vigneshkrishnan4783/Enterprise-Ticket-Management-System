@@ -1,5 +1,4 @@
 databaseChangeLog:
-  # Add your changelog includes here as you create them, e.g.:
-  # - include:
-  #     file: db.changelog/ticket-changelog-0.0.1.sql
-  #     relativeToChangelogFile: false
+  - include:
+      file: db.changelog/0.0.1-init-auth-ticket-schema.sql
+      relativeToChangelogFile: false

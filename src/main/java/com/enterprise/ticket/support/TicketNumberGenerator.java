@@ -1,0 +1,20 @@
+package com.enterprise.ticket.support;
+
+import com.enterprise.ticket.repository.TicketRepository;
+import org.springframework.stereotype.Component;
+
+/** Generates human-readable, sequentially unique ticket numbers (FR-002), e.g., TKT-10001. */
+@Component
+public class TicketNumberGenerator {
+
+  private final TicketRepository ticketRepository;
+
+  public TicketNumberGenerator(TicketRepository ticketRepository) {
+    this.ticketRepository = ticketRepository;
+  }
+
+  public String generateTicketNumber() {
+    Long nextSeq = ticketRepository.getNextTicketSequence();
+    return String.format("TKT-%05d", nextSeq);
+  }
+}
