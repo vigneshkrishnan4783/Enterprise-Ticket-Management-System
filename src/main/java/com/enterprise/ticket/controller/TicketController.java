@@ -6,7 +6,6 @@ import com.enterprise.ticket.response.TicketResponse;
 import com.enterprise.ticket.service.TicketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import java.security.Principal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,7 +31,7 @@ public class TicketController {
   @PostMapping
   @Operation(summary = "Create ticket", description = "Creates a ticket with unique human-readable ticket number (FR-002)")
   public ResponseEntity<ApiResponse<TicketResponse>> createTicket(
-      @Valid @RequestBody CreateTicketRequest request, Principal principal) {
+      @RequestBody CreateTicketRequest request, Principal principal) {
     TicketResponse response = ticketService.createTicket(request, principal.getName());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(ApiResponse.success("Ticket created successfully", response));

@@ -12,6 +12,7 @@ import com.enterprise.ticket.request.RegisterRequest;
 import com.enterprise.ticket.response.AuthResponse;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,11 +23,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service managing user registration, authentication, and profile retrieval.
+ * Service managing user registration and authentication with business validation.
  */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+  private static final Pattern EMAIL_PATTERN =
+      Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
   private final UserRepository userRepository;
   private final RoleRepository roleRepository;
@@ -38,10 +42,12 @@ public class AuthService {
 
   @Transactional
   public AuthResponse register(RegisterRequest request) {
-    if (userRepository.existsByUsername(request.getUsername())) {
+    validateRegisterRequest(request);
+
+    if (userRepository.existsByUsername(request.getUsername().trim())) {
       throw new IllegalArgumentException("Username is already taken");
     }
-    if (userRepository.existsByEmail(request.getEmail())) {
+    if (userRepository.existsByEmail(request.getEmail().trim().toLowerCase())) {
       throw new IllegalArgumentException("Email is already in use");
     }
 
@@ -68,13 +74,14 @@ public class AuthService {
 
     User user =
         User.builder()
-            .username(request.getUsername())
-            .email(request.getEmail())
+            .username(request.getUsername().trim())
+            .email(request.getEmail().trim().toLowerCase())
             .passwordHash(passwordEncoder.encode(request.getPassword()))
-            .firstName(request.getFirstName())
-            .lastName(request.getLastName())
+            .firstName(request.getFirstName().trim())
+            .lastName(request.getLastName().trim())
             .userType(request.getUserType())
-            .organizationName(request.getOrganizationName())
+            .organizationName(
+                request.getOrganizationName() != null ? request.getOrganizationName().trim() : null)
             .isActive(true)
             .roles(roles)
             .build();
@@ -88,14 +95,17 @@ public class AuthService {
   }
 
   public AuthResponse login(LoginRequest request) {
+    validateLoginRequest(request);
+
+    String loginIdentifier = request.getUsername().trim();
     authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+        new UsernamePasswordAuthenticationToken(loginIdentifier, request.getPassword()));
 
     User user =
         userRepository
-            .findByUsername(request.getUsername())
-            .or(() -> userRepository.findByEmail(request.getUsername()))
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            .findByUsername(loginIdentifier)
+            .or(() -> userRepository.findByEmail(loginIdentifier.toLowerCase()))
+            .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
 
     var userDetails = userDetailsService.loadUserByUsername(user.getUsername());
     String token = jwtService.generateToken(userDetails);
@@ -103,13 +113,40 @@ public class AuthService {
     return toAuthResponse(user, token);
   }
 
-  @Transactional(readOnly = true)
-  public AuthResponse getCurrentUser(String username) {
-    User user =
-        userRepository
-            .findByUsername(username)
-            .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
-    return toAuthResponse(user, null);
+  private void validateRegisterRequest(RegisterRequest request) {
+    if (request == null) {
+      throw new IllegalArgumentException("Registration request payload cannot be empty");
+    }
+    if (request.getUsername() == null || request.getUsername().trim().length() < 3 || request.getUsername().trim().length() > 50) {
+      throw new IllegalArgumentException("Username is required and must be between 3 and 50 characters");
+    }
+    if (request.getEmail() == null || !EMAIL_PATTERN.matcher(request.getEmail().trim()).matches()) {
+      throw new IllegalArgumentException("A valid email address is required");
+    }
+    if (request.getPassword() == null || request.getPassword().length() < 6) {
+      throw new IllegalArgumentException("Password is required and must be at least 6 characters");
+    }
+    if (request.getFirstName() == null || request.getFirstName().trim().isEmpty()) {
+      throw new IllegalArgumentException("First name is required");
+    }
+    if (request.getLastName() == null || request.getLastName().trim().isEmpty()) {
+      throw new IllegalArgumentException("Last name is required");
+    }
+    if (request.getUserType() == null) {
+      throw new IllegalArgumentException("User type is required (INTERNAL or EXTERNAL_CUSTOMER)");
+    }
+  }
+
+  private void validateLoginRequest(LoginRequest request) {
+    if (request == null) {
+      throw new IllegalArgumentException("Login request payload cannot be empty");
+    }
+    if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+      throw new IllegalArgumentException("Username or email is required");
+    }
+    if (request.getPassword() == null || request.getPassword().isEmpty()) {
+      throw new IllegalArgumentException("Password is required");
+    }
   }
 
   private AuthResponse toAuthResponse(User user, String token) {

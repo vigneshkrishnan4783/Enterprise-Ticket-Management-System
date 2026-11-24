@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service managing ticket lifecycle: creation, retrieval, and status tracking.
+ * Service managing ticket lifecycle with internal business validation.
  */
 @Service
 @RequiredArgsConstructor
@@ -28,6 +28,8 @@ public class TicketService {
 
   @Transactional
   public TicketResponse createTicket(CreateTicketRequest request, String reporterUsername) {
+    validateCreateTicketRequest(request);
+
     User reporter =
         userRepository
             .findByUsername(reporterUsername)
@@ -38,12 +40,12 @@ public class TicketService {
     Ticket ticket =
         Ticket.builder()
             .ticketNumber(generatedNumber)
-            .title(request.getTitle())
-            .description(request.getDescription())
+            .title(request.getTitle().trim())
+            .description(request.getDescription().trim())
             .priority(request.getPriority() != null ? request.getPriority() : TicketPriority.MEDIUM)
             .category(
                 request.getCategory() != null && !request.getCategory().isBlank()
-                    ? request.getCategory()
+                    ? request.getCategory().trim()
                     : "GENERAL")
             .status(TicketStatus.OPEN)
             .reporter(reporter)
@@ -55,9 +57,12 @@ public class TicketService {
 
   @Transactional(readOnly = true)
   public TicketResponse getTicketByNumber(String ticketNumber) {
+    if (ticketNumber == null || ticketNumber.trim().isEmpty()) {
+      throw new IllegalArgumentException("Ticket number is required");
+    }
     Ticket ticket =
         ticketRepository
-            .findByTicketNumber(ticketNumber)
+            .findByTicketNumber(ticketNumber.trim())
             .orElseThrow(
                 () -> new IllegalArgumentException("Ticket not found with number: " + ticketNumber));
     return toTicketResponse(ticket);
@@ -72,6 +77,18 @@ public class TicketService {
     return ticketRepository
         .findByReporterId(reporter.getId(), pageable)
         .map(this::toTicketResponse);
+  }
+
+  private void validateCreateTicketRequest(CreateTicketRequest request) {
+    if (request == null) {
+      throw new IllegalArgumentException("Create ticket payload cannot be empty");
+    }
+    if (request.getTitle() == null || request.getTitle().trim().length() < 5) {
+      throw new IllegalArgumentException("Title is required and must be at least 5 characters");
+    }
+    if (request.getDescription() == null || request.getDescription().trim().isEmpty()) {
+      throw new IllegalArgumentException("Description is required");
+    }
   }
 
   private TicketResponse toTicketResponse(Ticket ticket) {
