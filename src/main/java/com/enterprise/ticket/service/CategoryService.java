@@ -1,5 +1,6 @@
 package com.enterprise.ticket.service;
 
+import com.enterprise.ticket.exception.RestException;
 import com.enterprise.ticket.model.Category;
 import com.enterprise.ticket.model.Subcategory;
 import com.enterprise.ticket.repository.CategoryRepository;
@@ -14,10 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service managing configurable categories and subcategories (FR-005).
- * Uses explicit read-only transactions for queries and write transactions for mutations.
- */
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
@@ -37,7 +34,7 @@ public class CategoryService {
     Category category =
         categoryRepository
             .findById(categoryId)
-            .orElseThrow(() -> new IllegalArgumentException("Category not found with ID: " + categoryId));
+            .orElseThrow(() -> RestException.notFound("Category not found with ID: " + categoryId));
     return toCategoryResponse(category);
   }
 
@@ -46,10 +43,10 @@ public class CategoryService {
     validateCategoryRequest(request);
 
     if (categoryRepository.existsByCode(request.getCode().trim().toUpperCase())) {
-      throw new IllegalArgumentException("Category code already exists: " + request.getCode());
+      throw RestException.conflict("Category code already exists: " + request.getCode());
     }
     if (categoryRepository.existsByName(request.getName().trim())) {
-      throw new IllegalArgumentException("Category name already exists: " + request.getName());
+      throw RestException.conflict("Category name already exists: " + request.getName());
     }
 
     Category category =
@@ -71,10 +68,11 @@ public class CategoryService {
     Category category =
         categoryRepository
             .findById(categoryId)
-            .orElseThrow(() -> new IllegalArgumentException("Category not found with ID: " + categoryId));
+            .orElseThrow(() -> RestException.notFound("Category not found with ID: " + categoryId));
 
     if (subcategoryRepository.existsByCategoryIdAndCode(categoryId, request.getCode().trim().toUpperCase())) {
-      throw new IllegalArgumentException("Subcategory code already exists under this category: " + request.getCode());
+      throw RestException.conflict(
+          "Subcategory code already exists under this category: " + request.getCode());
     }
 
     Subcategory subcategory =
@@ -92,25 +90,25 @@ public class CategoryService {
 
   private void validateCategoryRequest(CreateCategoryRequest request) {
     if (request == null) {
-      throw new IllegalArgumentException("Category payload cannot be empty");
+      throw RestException.badRequest("Category payload cannot be empty");
     }
     if (request.getName() == null || request.getName().trim().isEmpty()) {
-      throw new IllegalArgumentException("Category name is required");
+      throw RestException.badRequest("Category name is required");
     }
     if (request.getCode() == null || request.getCode().trim().isEmpty()) {
-      throw new IllegalArgumentException("Category code is required");
+      throw RestException.badRequest("Category code is required");
     }
   }
 
   private void validateSubcategoryRequest(CreateSubcategoryRequest request) {
     if (request == null) {
-      throw new IllegalArgumentException("Subcategory payload cannot be empty");
+      throw RestException.badRequest("Subcategory payload cannot be empty");
     }
     if (request.getName() == null || request.getName().trim().isEmpty()) {
-      throw new IllegalArgumentException("Subcategory name is required");
+      throw RestException.badRequest("Subcategory name is required");
     }
     if (request.getCode() == null || request.getCode().trim().isEmpty()) {
-      throw new IllegalArgumentException("Subcategory code is required");
+      throw RestException.badRequest("Subcategory code is required");
     }
   }
 

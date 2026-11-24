@@ -2,6 +2,7 @@ package com.enterprise.ticket.controller;
 
 import com.enterprise.ticket.request.CreateTicketRequest;
 import com.enterprise.ticket.response.ApiResponse;
+import com.enterprise.ticket.response.ResponseBuilder;
 import com.enterprise.ticket.response.TicketResponse;
 import com.enterprise.ticket.service.TicketService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,8 +33,7 @@ public class TicketController {
   public ResponseEntity<ApiResponse<TicketResponse>> createTicket(
       @RequestBody CreateTicketRequest request, Principal principal) {
     TicketResponse response = ticketService.createTicket(request, principal.getName());
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .body(ApiResponse.success("Ticket created successfully", response));
+    return ResponseBuilder.created("Ticket created successfully", response);
   }
 
   @GetMapping("/{ticketNumber}")
@@ -42,14 +41,14 @@ public class TicketController {
   public ResponseEntity<ApiResponse<TicketResponse>> getTicket(
       @PathVariable String ticketNumber) {
     TicketResponse response = ticketService.getTicketByNumber(ticketNumber);
-    return ResponseEntity.ok(ApiResponse.success(response));
+    return ResponseBuilder.ok(response);
   }
 
   @GetMapping("/ticket")
-  @Operation(summary = "Get  tickets", description = "Returns paginated list of tickets reported by authenticated user")
+  @Operation(summary = "Get tickets", description = "Returns paginated list of tickets reported by authenticated user")
   public ResponseEntity<ApiResponse<Page<TicketResponse>>> getMyTickets(
       Principal principal, @PageableDefault(size = 20) Pageable pageable) {
     Page<TicketResponse> response = ticketService.getMyTickets(principal.getName(), pageable);
-    return ResponseEntity.ok(ApiResponse.success(response));
+    return ResponseBuilder.ok(response);
   }
 }

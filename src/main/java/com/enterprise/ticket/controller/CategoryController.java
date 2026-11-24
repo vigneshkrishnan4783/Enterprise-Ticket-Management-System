@@ -4,13 +4,13 @@ import com.enterprise.ticket.request.CreateCategoryRequest;
 import com.enterprise.ticket.request.CreateSubcategoryRequest;
 import com.enterprise.ticket.response.ApiResponse;
 import com.enterprise.ticket.response.CategoryResponse;
+import com.enterprise.ticket.response.ResponseBuilder;
 import com.enterprise.ticket.response.SubcategoryResponse;
 import com.enterprise.ticket.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,14 +34,14 @@ public class CategoryController {
   @Operation(summary = "List categories", description = "Returns all active categories with their nested subcategories")
   public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllActiveCategories() {
     List<CategoryResponse> categories = categoryService.getAllActiveCategories();
-    return ResponseEntity.ok(ApiResponse.success(categories));
+    return ResponseBuilder.ok(categories);
   }
 
   @GetMapping("/{id}")
   @Operation(summary = "Get category by ID", description = "Retrieves category details by category ID")
   public ResponseEntity<ApiResponse<CategoryResponse>> getCategoryById(@PathVariable Long id) {
     CategoryResponse category = categoryService.getCategoryById(id);
-    return ResponseEntity.ok(ApiResponse.success(category));
+    return ResponseBuilder.ok(category);
   }
 
   @PostMapping
@@ -49,8 +49,7 @@ public class CategoryController {
   public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
       @RequestBody CreateCategoryRequest request) {
     CategoryResponse category = categoryService.createCategory(request);
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .body(ApiResponse.success("Category created successfully", category));
+    return ResponseBuilder.created("Category created successfully", category);
   }
 
   @PostMapping("/{id}/subcategories")
@@ -58,7 +57,6 @@ public class CategoryController {
   public ResponseEntity<ApiResponse<SubcategoryResponse>> createSubcategory(
       @PathVariable Long id, @RequestBody CreateSubcategoryRequest request) {
     SubcategoryResponse subcategory = categoryService.createSubcategory(id, request);
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .body(ApiResponse.success("Subcategory created successfully", subcategory));
+    return ResponseBuilder.created("Subcategory created successfully", subcategory);
   }
 }

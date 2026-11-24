@@ -4,6 +4,7 @@ import com.enterprise.ticket.constant.TicketChannel;
 import com.enterprise.ticket.constant.TicketPriority;
 import com.enterprise.ticket.constant.TicketStatus;
 import com.enterprise.ticket.constant.UserType;
+import com.enterprise.ticket.exception.RestException;
 import com.enterprise.ticket.model.Asset;
 import com.enterprise.ticket.model.Category;
 import com.enterprise.ticket.model.Organization;
@@ -27,10 +28,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service managing ticket lifecycle with read/write transaction boundaries
- * and data-scope authorization validations (FR-003, FR-004, FR-005).
- */
 @Service
 @RequiredArgsConstructor
 public class TicketService {
@@ -44,10 +41,6 @@ public class TicketService {
   private final SubcategoryRepository subcategoryRepository;
   private final TicketNumberGenerator ticketNumberGenerator;
 
-  /**
-   * Write Transaction: Validates authorization scope (organization, site, asset, category)
-   * and creates a new ticket.
-   */
   @Transactional
   public TicketResponse createTicket(CreateTicketRequest request, String reporterUsername) {
     validateCreateTicketRequest(request);
@@ -55,17 +48,16 @@ public class TicketService {
     User reporter =
         userRepository
             .findByUsername(reporterUsername)
-            .orElseThrow(() -> new IllegalArgumentException("User not found: " + reporterUsername));
+            .orElseThrow(() -> RestException.notFound("User not found: " + reporterUsername));
 
-    // FR-004: Validate organization scope
+    // FR-003 & FR-004: Validate organization scope and access
     Organization organization = null;
     Long orgId = request.getOrganizationId();
     if (orgId != null) {
       organization =
           organizationRepository
               .findById(orgId)
-              .orElseThrow(
-                  () -> new IllegalArgumentException("Organization not found with ID: " + orgId));
+              .orElseThrow(() -> RestException.notFound("Organization not found with ID: " + orgId));
 
       validateUserOrganizationAccess(reporter, organization);
     }
@@ -75,14 +67,14 @@ public class TicketService {
     Long siteId = request.getSiteId();
     if (siteId != null) {
       if (organization == null) {
-        throw new IllegalArgumentException("Site requires an Organization to be selected");
+        throw RestException.badRequest("Site requires an Organization to be selected");
       }
       site =
           siteRepository
               .findByIdAndOrganizationId(siteId, orgId)
               .orElseThrow(
                   () ->
-                      new IllegalArgumentException(
+                      RestException.badRequest(
                           "Selected Site does not belong to Organization ID: " + orgId));
     }
 
@@ -91,18 +83,18 @@ public class TicketService {
     Long assetId = request.getAssetId();
     if (assetId != null) {
       if (organization == null) {
-        throw new IllegalArgumentException("Asset requires an Organization to be selected");
+        throw RestException.badRequest("Asset requires an Organization to be selected");
       }
       asset =
           assetRepository
               .findByIdAndOrganizationId(assetId, orgId)
               .orElseThrow(
                   () ->
-                      new IllegalArgumentException(
+                      RestException.badRequest(
                           "Selected Asset does not belong to Organization ID: " + orgId));
 
       if (site != null && asset.getSite() != null && !asset.getSite().getId().equals(site.getId())) {
-        throw new IllegalArgumentException(
+        throw RestException.badRequest(
             "Selected Asset does not belong to Site ID: " + site.getId());
       }
     }
@@ -114,22 +106,21 @@ public class TicketService {
       category =
           categoryRepository
               .findById(catId)
-              .orElseThrow(
-                  () -> new IllegalArgumentException("Category not found with ID: " + catId));
+              .orElseThrow(() -> RestException.notFound("Category not found with ID: " + catId));
     }
 
     Subcategory subcategory = null;
     Long subcatId = request.getSubcategoryId();
     if (subcatId != null) {
       if (category == null) {
-        throw new IllegalArgumentException("Subcategory requires a Category to be selected");
+        throw RestException.badRequest("Subcategory requires a Category to be selected");
       }
       subcategory =
           subcategoryRepository
               .findByIdAndCategoryId(subcatId, catId)
               .orElseThrow(
                   () ->
-                      new IllegalArgumentException(
+                      RestException.badRequest(
                           "Selected Subcategory does not belong to Category ID: " + catId));
     }
 
@@ -155,39 +146,30 @@ public class TicketService {
     return toTicketResponse(ticket);
   }
 
-  /**
-   * Read-Only Transaction: Optimizes JDBC performance and disables dirty checks.
-   */
   @Transactional(readOnly = true)
   public TicketResponse getTicketByNumber(String ticketNumber) {
     if (ticketNumber == null || ticketNumber.trim().isEmpty()) {
-      throw new IllegalArgumentException("Ticket number is required");
+      throw RestException.badRequest("Ticket number is required");
     }
     Ticket ticket =
         ticketRepository
             .findByTicketNumber(ticketNumber.trim())
             .orElseThrow(
-                () -> new IllegalArgumentException("Ticket not found with number: " + ticketNumber));
+                () -> RestException.notFound("Ticket not found with number: " + ticketNumber));
     return toTicketResponse(ticket);
   }
 
-  /**
-   * Read-Only Transaction: Paginated search for user tickets.
-   */
   @Transactional(readOnly = true)
   public Page<TicketResponse> getMyTickets(String reporterUsername, Pageable pageable) {
     User reporter =
         userRepository
             .findByUsername(reporterUsername)
-            .orElseThrow(() -> new IllegalArgumentException("User not found: " + reporterUsername));
+            .orElseThrow(() -> RestException.notFound("User not found: " + reporterUsername));
     return ticketRepository
         .findByReporterId(reporter.getId(), pageable)
         .map(this::toTicketResponse);
   }
 
-  /**
-   * FR-004: Enforces that external customers can only raise tickets for their own organization.
-   */
   private void validateUserOrganizationAccess(User user, Organization organization) {
     if (user.getUserType() == UserType.EXTERNAL_CUSTOMER) {
       boolean matchesOrgName =
@@ -200,7 +182,7 @@ public class TicketService {
                   .anyMatch(org -> org.getId().equals(organization.getId()));
 
       if (!matchesOrgName && !matchesOrgList) {
-        throw new IllegalArgumentException(
+        throw RestException.forbidden(
             "Access denied: User is not authorized to create tickets for organization: "
                 + organization.getName());
       }
@@ -209,13 +191,13 @@ public class TicketService {
 
   private void validateCreateTicketRequest(CreateTicketRequest request) {
     if (request == null) {
-      throw new IllegalArgumentException("Create ticket payload cannot be empty");
+      throw RestException.badRequest("Create ticket payload cannot be empty");
     }
     if (request.getTitle() == null || request.getTitle().trim().length() < 5) {
-      throw new IllegalArgumentException("Title is required and must be at least 5 characters");
+      throw RestException.badRequest("Title is required and must be at least 5 characters");
     }
     if (request.getDescription() == null || request.getDescription().trim().isEmpty()) {
-      throw new IllegalArgumentException("Description is required");
+      throw RestException.badRequest("Description is required");
     }
   }
 

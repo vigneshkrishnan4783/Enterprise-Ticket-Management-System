@@ -3,6 +3,7 @@ package com.enterprise.ticket.service;
 import com.enterprise.ticket.config.JwtProperties;
 import com.enterprise.ticket.constant.RoleType;
 import com.enterprise.ticket.constant.UserType;
+import com.enterprise.ticket.exception.RestException;
 import com.enterprise.ticket.model.Role;
 import com.enterprise.ticket.model.User;
 import com.enterprise.ticket.repository.RoleRepository;
@@ -42,10 +43,10 @@ public class AuthService {
     validateRegisterRequest(request);
 
     if (userRepository.existsByUsername(request.getUsername().trim())) {
-      throw new IllegalArgumentException("Username is already taken");
+      throw RestException.conflict("Username is already taken");
     }
     if (userRepository.existsByEmail(request.getEmail().trim().toLowerCase())) {
-      throw new IllegalArgumentException("Email is already in use");
+      throw RestException.conflict("Email is already in use");
     }
 
     RoleType targetRoleType =
@@ -102,7 +103,7 @@ public class AuthService {
         userRepository
             .findByUsername(loginIdentifier)
             .or(() -> userRepository.findByEmail(loginIdentifier.toLowerCase()))
-            .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
+            .orElseThrow(() -> RestException.unauthorized("Invalid username or password"));
 
     var userDetails = userDetailsService.loadUserByUsername(user.getUsername());
     String token = jwtService.generateToken(userDetails);
@@ -112,37 +113,39 @@ public class AuthService {
 
   private void validateRegisterRequest(RegisterRequest request) {
     if (request == null) {
-      throw new IllegalArgumentException("Registration request payload cannot be empty");
+      throw RestException.badRequest("Registration request payload cannot be empty");
     }
-    if (request.getUsername() == null || request.getUsername().trim().length() < 3 || request.getUsername().trim().length() > 50) {
-      throw new IllegalArgumentException("Username is required and must be between 3 and 50 characters");
+    if (request.getUsername() == null
+        || request.getUsername().trim().length() < 3
+        || request.getUsername().trim().length() > 50) {
+      throw RestException.badRequest("Username is required and must be between 3 and 50 characters");
     }
     if (request.getEmail() == null || !EMAIL_PATTERN.matcher(request.getEmail().trim()).matches()) {
-      throw new IllegalArgumentException("A valid email address is required");
+      throw RestException.badRequest("A valid email address is required");
     }
     if (request.getPassword() == null || request.getPassword().length() < 6) {
-      throw new IllegalArgumentException("Password is required and must be at least 6 characters");
+      throw RestException.badRequest("Password is required and must be at least 6 characters");
     }
     if (request.getFirstName() == null || request.getFirstName().trim().isEmpty()) {
-      throw new IllegalArgumentException("First name is required");
+      throw RestException.badRequest("First name is required");
     }
     if (request.getLastName() == null || request.getLastName().trim().isEmpty()) {
-      throw new IllegalArgumentException("Last name is required");
+      throw RestException.badRequest("Last name is required");
     }
     if (request.getUserType() == null) {
-      throw new IllegalArgumentException("User type is required (INTERNAL or EXTERNAL_CUSTOMER)");
+      throw RestException.badRequest("User type is required (INTERNAL or EXTERNAL_CUSTOMER)");
     }
   }
 
   private void validateLoginRequest(LoginRequest request) {
     if (request == null) {
-      throw new IllegalArgumentException("Login request payload cannot be empty");
+      throw RestException.badRequest("Login request payload cannot be empty");
     }
     if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
-      throw new IllegalArgumentException("Username or email is required");
+      throw RestException.badRequest("Username or email is required");
     }
     if (request.getPassword() == null || request.getPassword().isEmpty()) {
-      throw new IllegalArgumentException("Password is required");
+      throw RestException.badRequest("Password is required");
     }
   }
 
