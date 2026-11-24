@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: enterprise-ticket-management-system
+
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ticket_dev_db
+    username: postgres
+    password: 123456
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: etms-hikari-pool
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 30000
+      connection-timeout: 20000
+      max-lifetime: 1800000
+
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        default_schema: public
+
+
+  liquibase:
+    enabled: true
+    change-log: classpath:db.changelog/db.changelog-master.yaml
+    default-schema: public
+    drop-first: false
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+  compression:
+    enabled: true
+    mime-types: application/json,text/plain
+    min-response-size: 1024
+
+
+jwt:
+  secret: ${JWT_SECRET:5a6f8b3c2d1e4f7a9b0c3d6e1f4a7b2c5d8e1f4a7b0c3d6e9f2a5b8c1d4e7f0}
+  expiration-ms: 86400000
+  refresh-expiration-ms: 604800000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics, liquibase
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    root: INFO
+    com.enterprise: DEBUG
+    org.hibernate.SQL: DEBUG
+    liquibase: INFO

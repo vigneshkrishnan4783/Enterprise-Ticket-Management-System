@@ -1,0 +1,5 @@
+databaseChangeLog:
+  # Add your changelog includes here as you create them, e.g.:
+  # - include:
+  #     file: db.changelog/ticket-changelog-0.0.1.sql
+  #     relativeToChangelogFile: false
