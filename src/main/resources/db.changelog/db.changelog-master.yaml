@@ -8,3 +8,6 @@ databaseChangeLog:
   - include:
       file: db.changelog/0.0.3-impact-urgency-priority-matrix.sql
       relativeToChangelogFile: false
+  - include:
+      file: db.changelog/0.0.4-teams-and-assignments.sql
+      relativeToChangelogFile: false

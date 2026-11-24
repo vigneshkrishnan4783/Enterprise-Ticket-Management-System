@@ -88,4 +88,15 @@ public class Ticket extends BaseEntity {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "urgency_id")
   private Urgency urgency;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "assigned_team_id")
+  private Team assignedTeam;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "assigned_agent_id")
+  private User assignedAgent;
+
+  @Column(name = "assigned_at")
+  private java.time.Instant assignedAt;
 }
