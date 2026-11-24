@@ -40,6 +40,5 @@ public class RegisterRequest {
 
   private String organizationName;
 
-  /** Optional: Defaults to ROLE_CUSTOMER or ROLE_EMPLOYEE based on userType if omitted */
   private RoleType role;
 }

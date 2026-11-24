@@ -3,7 +3,6 @@ package com.enterprise.ticket.support;
 import com.enterprise.ticket.repository.TicketRepository;
 import org.springframework.stereotype.Component;
 
-/** Generates human-readable, sequentially unique ticket numbers (FR-002), e.g., TKT-10001. */
 @Component
 public class TicketNumberGenerator {
 

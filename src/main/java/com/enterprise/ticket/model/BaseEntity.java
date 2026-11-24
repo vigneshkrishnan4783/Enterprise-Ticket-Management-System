@@ -8,7 +8,6 @@ import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Base auditing entity providing creation and update timestamps in UTC. */
 @Getter
 @Setter
 @MappedSuperclass
