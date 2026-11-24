@@ -80,4 +80,12 @@ public class Ticket extends BaseEntity {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "subcategory_id")
   private Subcategory subcategory;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "impact_id")
+  private Impact impact;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "urgency_id")
+  private Urgency urgency;
 }

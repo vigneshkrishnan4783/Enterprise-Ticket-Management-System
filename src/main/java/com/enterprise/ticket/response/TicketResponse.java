@@ -31,6 +31,10 @@ public class TicketResponse {
 
   private String categoryName;
   private String subcategoryName;
+  private Long impactId;
+  private String impactName;
+  private Long urgencyId;
+  private String urgencyName;
 
   private Instant createdAt;
   private Instant updatedAt;

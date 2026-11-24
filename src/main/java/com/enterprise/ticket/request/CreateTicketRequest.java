@@ -24,4 +24,6 @@ public class CreateTicketRequest {
 
   private Long categoryId;
   private Long subcategoryId;
+  private Long impactId;
+  private Long urgencyId;
 }

@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       file: db.changelog/0.0.2-organizations-sites-categories.sql
       relativeToChangelogFile: false
+  - include:
+      file: db.changelog/0.0.3-impact-urgency-priority-matrix.sql
+      relativeToChangelogFile: false
