@@ -66,6 +66,7 @@ public class TicketService {
   private final TicketAssignmentHistoryRepository assignmentHistoryRepository;
   private final PriorityConfigService priorityConfigService;
   private final AssignmentRuleEngine assignmentRuleEngine;
+  private final SlaCalculatorService slaCalculatorService;
   private final TicketNumberGenerator ticketNumberGenerator;
 
   @Transactional
@@ -186,6 +187,9 @@ public class TicketService {
             .impact(impact)
             .urgency(urgency)
             .build();
+
+    slaCalculatorService.calculateDeadlines(ticket);
+
     Optional<AssignmentRuleEngine.RuleEvaluationResult> autoAssignResult =
         assignmentRuleEngine.evaluate(ticket);
 
@@ -527,6 +531,12 @@ public class TicketService {
         .assignedAt(ticket.getAssignedAt())
         .assignmentSource(ticket.getAssignmentSource())
         .assignmentReason(ticket.getAssignmentReason())
+        .responseDueAt(ticket.getResponseDueAt())
+        .resolutionDueAt(ticket.getResolutionDueAt())
+        .firstRespondedAt(ticket.getFirstRespondedAt())
+        .resolvedAt(ticket.getResolvedAt())
+        .isResponseBreached(ticket.getIsResponseBreached())
+        .isResolutionBreached(ticket.getIsResolutionBreached())
         .createdAt(ticket.getCreatedAt())
         .updatedAt(ticket.getUpdatedAt())
         .build();

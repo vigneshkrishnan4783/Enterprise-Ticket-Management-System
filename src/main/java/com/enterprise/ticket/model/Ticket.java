@@ -106,4 +106,24 @@ public class Ticket extends BaseEntity {
 
   @Column(name = "assignment_reason", columnDefinition = "TEXT")
   private String assignmentReason;
+
+  @Column(name = "response_due_at")
+  private java.time.Instant responseDueAt;
+
+  @Column(name = "resolution_due_at")
+  private java.time.Instant resolutionDueAt;
+
+  @Column(name = "first_responded_at")
+  private java.time.Instant firstRespondedAt;
+
+  @Column(name = "resolved_at")
+  private java.time.Instant resolvedAt;
+
+  @Column(name = "is_response_breached", nullable = false)
+  @Builder.Default
+  private Boolean isResponseBreached = false;
+
+  @Column(name = "is_resolution_breached", nullable = false)
+  @Builder.Default
+  private Boolean isResolutionBreached = false;
 }
