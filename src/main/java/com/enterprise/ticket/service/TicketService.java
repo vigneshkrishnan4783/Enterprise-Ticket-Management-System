@@ -1,5 +1,6 @@
 package com.enterprise.ticket.service;
 
+import com.enterprise.ticket.constant.AssignmentSource;
 import com.enterprise.ticket.constant.RoleType;
 import com.enterprise.ticket.constant.TicketChannel;
 import com.enterprise.ticket.constant.TicketPriority;
@@ -37,9 +38,11 @@ import com.enterprise.ticket.specification.TicketSpecification;
 import com.enterprise.ticket.support.TicketNumberGenerator;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -47,6 +50,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TicketService {
 
   private final TicketRepository ticketRepository;
@@ -61,6 +65,7 @@ public class TicketService {
   private final TeamRepository teamRepository;
   private final TicketAssignmentHistoryRepository assignmentHistoryRepository;
   private final PriorityConfigService priorityConfigService;
+  private final AssignmentRuleEngine assignmentRuleEngine;
   private final TicketNumberGenerator ticketNumberGenerator;
 
   @Transactional
@@ -71,8 +76,6 @@ public class TicketService {
         userRepository
             .findByUsername(reporterUsername)
             .orElseThrow(() -> RestException.notFound("User not found: " + reporterUsername));
-
-    // FR-003 & FR-004: Validate organization scope and access
     Organization organization = null;
     Long orgId = request.getOrganizationId();
     if (orgId != null) {
@@ -83,8 +86,6 @@ public class TicketService {
 
       validateUserOrganizationAccess(reporter, organization);
     }
-
-    // FR-004: Validate site scope
     Site site = null;
     Long siteId = request.getSiteId();
     if (siteId != null) {
@@ -99,8 +100,6 @@ public class TicketService {
                       RestException.badRequest(
                           "Selected Site does not belong to Organization ID: " + orgId));
     }
-
-    // FR-004: Validate asset scope
     Asset asset = null;
     Long assetId = request.getAssetId();
     if (assetId != null) {
@@ -120,8 +119,6 @@ public class TicketService {
             "Selected Asset does not belong to Site ID: " + site.getId());
       }
     }
-
-    // FR-005: Validate category and subcategory
     Category category = null;
     Long catId = request.getCategoryId();
     if (catId != null) {
@@ -145,8 +142,6 @@ public class TicketService {
                       RestException.badRequest(
                           "Selected Subcategory does not belong to Category ID: " + catId));
     }
-
-    // FR-006: Support Impact, Urgency, and Dynamic Priority Matrix Calculation
     Impact impact = null;
     if (request.getImpactId() != null) {
       impact =
@@ -191,15 +186,41 @@ public class TicketService {
             .impact(impact)
             .urgency(urgency)
             .build();
+    Optional<AssignmentRuleEngine.RuleEvaluationResult> autoAssignResult =
+        assignmentRuleEngine.evaluate(ticket);
 
-    ticket = ticketRepository.save(ticket);
+    if (autoAssignResult.isPresent()) {
+      AssignmentRuleEngine.RuleEvaluationResult result = autoAssignResult.get();
+      ticket.setAssignedTeam(result.getTargetTeam());
+      ticket.setAssignedAgent(result.getTargetAgent());
+      ticket.setAssignedAt(Instant.now());
+      ticket.setAssignmentSource(AssignmentSource.AUTO_RULE);
+      ticket.setAssignmentReason(result.getReason());
+      ticket.setStatus(TicketStatus.IN_PROGRESS);
+
+      ticket = ticketRepository.save(ticket);
+      TicketAssignmentHistory history =
+          TicketAssignmentHistory.builder()
+              .ticket(ticket)
+              .previousTeam(null)
+              .newTeam(result.getTargetTeam())
+              .previousAgent(null)
+              .newAgent(result.getTargetAgent())
+              .assignedBy(null) // Automatic rule system execution
+              .assignmentSource(AssignmentSource.AUTO_RULE)
+              .reason(result.getReason())
+              .rule(result.getMatchedRule())
+              .comment("Auto-assigned on ticket creation")
+              .build();
+      assignmentHistoryRepository.save(history);
+    } else {
+      ticket = ticketRepository.save(ticket);
+    }
+
     return toTicketResponse(ticket);
   }
 
-  /**
-   * Enforces ticket-level read data access.
-   */
-  @Transactional(readOnly = true)
+    @Transactional(readOnly = true)
   public TicketResponse getTicketByNumber(String ticketNumber, String username) {
     if (ticketNumber == null || ticketNumber.trim().isEmpty()) {
       throw RestException.badRequest("Ticket number is required");
@@ -230,18 +251,13 @@ public class TicketService {
         .map(this::toTicketResponse);
   }
 
-  /**
-   * Search tickets with caller-scoped data access enforcement.
-   */
-  @Transactional(readOnly = true)
+    @Transactional(readOnly = true)
   public Page<TicketResponse> searchTickets(
       TicketSearchFilter filter, String username, Pageable pageable) {
     User caller =
         userRepository
             .findByUsername(username)
             .orElseThrow(() -> RestException.notFound("User not found: " + username));
-
-    // If external customer, scope search strictly to their organization or reported tickets
     if (caller.getUserType() == UserType.EXTERNAL_CUSTOMER) {
       if (caller.getOrganizations() != null && !caller.getOrganizations().isEmpty()) {
         filter.setOrganizationId(caller.getOrganizations().iterator().next().getId());
@@ -255,10 +271,7 @@ public class TicketService {
         .map(this::toTicketResponse);
   }
 
-  /**
-   * Manual assignment & reassignment to a team and/or agent with audit history log.
-   */
-  @Transactional
+    @Transactional
   public TicketResponse assignTicket(
       String ticketNumber, AssignTicketRequest request, String assignedByUsername) {
     if (request == null || (request.getTeamId() == null && request.getAgentId() == null)) {
@@ -275,8 +288,6 @@ public class TicketService {
             .findByTicketNumber(ticketNumber.trim())
             .orElseThrow(
                 () -> RestException.notFound("Ticket not found with number: " + ticketNumber));
-
-    // Enforce ticket-level write data access
     enforceTicketAccess(ticket, assigner, "assign");
 
     Team previousTeam = ticket.getAssignedTeam();
@@ -300,8 +311,6 @@ public class TicketService {
               .findById(request.getAgentId())
               .orElseThrow(
                   () -> RestException.notFound("Agent not found with ID: " + request.getAgentId()));
-
-      // If team is specified, validate agent membership in that team
       if (newTeam != null) {
         boolean isMember =
             newTeam.getMembers().stream().anyMatch(m -> m.getId().equals(request.getAgentId()));
@@ -314,18 +323,21 @@ public class TicketService {
       newAgent = previousAgent;
     }
 
+    String reason =
+        (request.getComment() != null && !request.getComment().trim().isEmpty())
+            ? request.getComment().trim()
+            : "Manually assigned by " + assigner.getUsername();
+
     ticket.setAssignedTeam(newTeam);
     ticket.setAssignedAgent(newAgent);
     ticket.setAssignedAt(Instant.now());
-
-    // Auto-update status from OPEN to IN_PROGRESS upon first assignment
+    ticket.setAssignmentSource(AssignmentSource.MANUAL);
+    ticket.setAssignmentReason(reason);
     if (ticket.getStatus() == TicketStatus.OPEN) {
       ticket.setStatus(TicketStatus.IN_PROGRESS);
     }
 
     ticket = ticketRepository.save(ticket);
-
-    // Save audit history log
     TicketAssignmentHistory history =
         TicketAssignmentHistory.builder()
             .ticket(ticket)
@@ -334,6 +346,8 @@ public class TicketService {
             .previousAgent(previousAgent)
             .newAgent(newAgent)
             .assignedBy(assigner)
+            .assignmentSource(AssignmentSource.MANUAL)
+            .reason(reason)
             .comment(request.getComment() != null ? request.getComment().trim() : null)
             .build();
     assignmentHistoryRepository.save(history);
@@ -341,10 +355,7 @@ public class TicketService {
     return toTicketResponse(ticket);
   }
 
-  /**
-   * Retrieves audit trail of ticket assignments.
-   */
-  @Transactional(readOnly = true)
+    @Transactional(readOnly = true)
   public List<TicketAssignmentHistoryResponse> getAssignmentHistory(
       String ticketNumber, String username) {
     User caller =
@@ -365,19 +376,68 @@ public class TicketService {
         .collect(Collectors.toList());
   }
 
-  /**
-   * Enforces fine-grained ticket data access for both read and write operations.
-   */
-  private void enforceTicketAccess(Ticket ticket, User caller, String action) {
+    @Transactional
+  public TicketResponse autoAssignTicket(String ticketNumber, String username) {
+    User caller =
+        userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> RestException.notFound("User not found: " + username));
+
+    Ticket ticket =
+        ticketRepository
+            .findByTicketNumber(ticketNumber.trim())
+            .orElseThrow(
+                () -> RestException.notFound("Ticket not found with number: " + ticketNumber));
+
+    enforceTicketAccess(ticket, caller, "auto-assign");
+
+    Optional<AssignmentRuleEngine.RuleEvaluationResult> matchResult =
+        assignmentRuleEngine.evaluate(ticket);
+
+    if (matchResult.isEmpty()) {
+      throw RestException.badRequest("No active assignment rule matched the ticket criteria");
+    }
+
+    AssignmentRuleEngine.RuleEvaluationResult result = matchResult.get();
+    Team previousTeam = ticket.getAssignedTeam();
+    User previousAgent = ticket.getAssignedAgent();
+
+    ticket.setAssignedTeam(result.getTargetTeam());
+    ticket.setAssignedAgent(result.getTargetAgent());
+    ticket.setAssignedAt(Instant.now());
+    ticket.setAssignmentSource(AssignmentSource.AUTO_RULE);
+    ticket.setAssignmentReason(result.getReason());
+
+    if (ticket.getStatus() == TicketStatus.OPEN) {
+      ticket.setStatus(TicketStatus.IN_PROGRESS);
+    }
+
+    ticket = ticketRepository.save(ticket);
+
+    TicketAssignmentHistory history =
+        TicketAssignmentHistory.builder()
+            .ticket(ticket)
+            .previousTeam(previousTeam)
+            .newTeam(result.getTargetTeam())
+            .previousAgent(previousAgent)
+            .newAgent(result.getTargetAgent())
+            .assignedBy(caller)
+            .assignmentSource(AssignmentSource.AUTO_RULE)
+            .reason(result.getReason())
+            .rule(result.getMatchedRule())
+            .comment("Triggered rule-based automatic assignment")
+            .build();
+    assignmentHistoryRepository.save(history);
+
+    return toTicketResponse(ticket);
+  }
+
+    private void enforceTicketAccess(Ticket ticket, User caller, String action) {
     Set<RoleType> roles =
         caller.getRoles().stream().map(r -> r.getName()).collect(Collectors.toSet());
-
-    // ADMIN has cross-organization full access
     if (roles.contains(RoleType.ROLE_ADMIN)) {
       return;
     }
-
-    // EXTERNAL CUSTOMER: Can only access tickets of their own organization or tickets they reported
     if (caller.getUserType() == UserType.EXTERNAL_CUSTOMER) {
       boolean isReporter = ticket.getReporter().getId().equals(caller.getId());
       boolean isSameOrg =
@@ -393,8 +453,6 @@ public class TicketService {
       }
       return;
     }
-
-    // INTERNAL EMPLOYEE / AGENT: Authorized if reporter, assigned agent, or belongs to assigned team
     boolean isReporter = ticket.getReporter().getId().equals(caller.getId());
     boolean isAssignedAgent =
         ticket.getAssignedAgent() != null && ticket.getAssignedAgent().getId().equals(caller.getId());
@@ -403,7 +461,6 @@ public class TicketService {
             && ticket.getAssignedTeam().getMembers().stream()
                 .anyMatch(m -> m.getId().equals(caller.getId()));
 
-    // Technicians can also view tickets if they belong to any support role unless unassigned
     if (!isReporter && !isAssignedAgent && !isAssignedTeamMember && !roles.contains(RoleType.ROLE_AGENT)) {
       throw RestException.forbidden(
           "Access denied: You are not authorized to " + action + " ticket " + ticket.getTicketNumber());
@@ -468,6 +525,8 @@ public class TicketService {
         .assignedAgentUsername(
             ticket.getAssignedAgent() != null ? ticket.getAssignedAgent().getUsername() : null)
         .assignedAt(ticket.getAssignedAt())
+        .assignmentSource(ticket.getAssignmentSource())
+        .assignmentReason(ticket.getAssignmentReason())
         .createdAt(ticket.getCreatedAt())
         .updatedAt(ticket.getUpdatedAt())
         .build();
@@ -486,7 +545,11 @@ public class TicketService {
             history.getPreviousAgent() != null ? history.getPreviousAgent().getUsername() : null)
         .newAgentUsername(history.getNewAgent() != null ? history.getNewAgent().getUsername() : null)
         .assignedByUsername(
-            history.getAssignedBy() != null ? history.getAssignedBy().getUsername() : null)
+            history.getAssignedBy() != null ? history.getAssignedBy().getUsername() : "SYSTEM_RULE")
+        .assignmentSource(history.getAssignmentSource())
+        .reason(history.getReason())
+        .ruleId(history.getRule() != null ? history.getRule().getId() : null)
+        .ruleName(history.getRule() != null ? history.getRule().getName() : null)
         .comment(history.getComment())
         .createdAt(history.getCreatedAt())
         .build();

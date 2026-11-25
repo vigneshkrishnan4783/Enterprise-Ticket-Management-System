@@ -1,6 +1,5 @@
 package com.enterprise.ticket.constant;
 
-/** Ticket Priority definitions with SLA response levels. */
 public enum TicketPriority {
   CRITICAL("Critical business impact requiring immediate response"),
   HIGH("High priority issue impacting key business operations"),

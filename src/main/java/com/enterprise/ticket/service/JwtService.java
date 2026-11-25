@@ -13,9 +13,6 @@ import javax.crypto.SecretKey;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-/**
- * Service managing JWT creation, extraction, and validation.
- */
 @Service
 public class JwtService {
 

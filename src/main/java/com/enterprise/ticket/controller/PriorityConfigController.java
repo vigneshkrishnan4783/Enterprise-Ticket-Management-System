@@ -32,39 +32,57 @@ public class PriorityConfigController {
   @GetMapping("/impacts")
   @Operation(summary = "Get all active impacts", description = "Returns active configurable impact levels ordered by severity weight")
   public ResponseEntity<ApiResponse<List<ImpactResponse>>> getAllImpacts() {
-    return ResponseBuilder.ok(priorityConfigService.getAllImpacts());
+    return ResponseBuilder.<List<ImpactResponse>>builder()
+        .success()
+        .withData(priorityConfigService.getAllImpacts())
+        .build();
   }
 
   @PostMapping("/impacts")
   @Operation(summary = "Create impact level", description = "Adds a new impact definition")
   public ResponseEntity<ApiResponse<ImpactResponse>> createImpact(
       @RequestBody CreateImpactRequest request) {
-    return ResponseBuilder.created("Impact created successfully", priorityConfigService.createImpact(request));
+    return ResponseBuilder.<ImpactResponse>builder()
+        .created("Impact created successfully")
+        .withData(priorityConfigService.createImpact(request))
+        .build();
   }
 
   @GetMapping("/urgencies")
   @Operation(summary = "Get all active urgencies", description = "Returns active configurable urgency levels ordered by urgency weight")
   public ResponseEntity<ApiResponse<List<UrgencyResponse>>> getAllUrgencies() {
-    return ResponseBuilder.ok(priorityConfigService.getAllUrgencies());
+    return ResponseBuilder.<List<UrgencyResponse>>builder()
+        .success()
+        .withData(priorityConfigService.getAllUrgencies())
+        .build();
   }
 
   @PostMapping("/urgencies")
   @Operation(summary = "Create urgency level", description = "Adds a new urgency definition")
   public ResponseEntity<ApiResponse<UrgencyResponse>> createUrgency(
       @RequestBody CreateUrgencyRequest request) {
-    return ResponseBuilder.created("Urgency created successfully", priorityConfigService.createUrgency(request));
+    return ResponseBuilder.<UrgencyResponse>builder()
+        .created("Urgency created successfully")
+        .withData(priorityConfigService.createUrgency(request))
+        .build();
   }
 
   @GetMapping("/matrix")
   @Operation(summary = "Get priority matrix mappings", description = "Returns dynamic Impact x Urgency -> Priority mapping table")
   public ResponseEntity<ApiResponse<List<PriorityMatrixResponse>>> getPriorityMatrix() {
-    return ResponseBuilder.ok(priorityConfigService.getPriorityMatrix());
+    return ResponseBuilder.<List<PriorityMatrixResponse>>builder()
+        .success()
+        .withData(priorityConfigService.getPriorityMatrix())
+        .build();
   }
 
   @PutMapping("/matrix")
   @Operation(summary = "Configure priority matrix rule", description = "Maps an Impact and Urgency combination to a calculated Priority")
   public ResponseEntity<ApiResponse<PriorityMatrixResponse>> configureMatrix(
       @RequestBody ConfigurePriorityMatrixRequest request) {
-    return ResponseBuilder.ok("Priority matrix updated successfully", priorityConfigService.configureMatrix(request));
+    return ResponseBuilder.<PriorityMatrixResponse>builder()
+        .success("Priority matrix updated successfully")
+        .withData(priorityConfigService.configureMatrix(request))
+        .build();
   }
 }

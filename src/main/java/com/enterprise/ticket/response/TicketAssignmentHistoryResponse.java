@@ -19,6 +19,10 @@ public class TicketAssignmentHistoryResponse {
   private String previousAgentUsername;
   private String newAgentUsername;
   private String assignedByUsername;
+  private com.enterprise.ticket.constant.AssignmentSource assignmentSource;
+  private String reason;
+  private Long ruleId;
+  private String ruleName;
   private String comment;
   private Instant createdAt;
 }

@@ -18,8 +18,6 @@ public final class TicketSpecification {
       }
 
       List<Predicate> predicates = new ArrayList<>();
-
-      // Keyword search across ticketNumber, title, and description
       if (filter.getKeyword() != null && !filter.getKeyword().trim().isEmpty()) {
         String pattern = "%" + filter.getKeyword().trim().toLowerCase() + "%";
         Predicate ticketNumMatch = cb.like(cb.lower(root.get("ticketNumber")), pattern);
