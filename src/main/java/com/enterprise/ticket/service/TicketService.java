@@ -206,7 +206,7 @@ public class TicketService {
               .newTeam(result.getTargetTeam())
               .previousAgent(null)
               .newAgent(result.getTargetAgent())
-              .assignedBy(null) // Automatic rule system execution
+              .assignedBy(null)
               .assignmentSource(AssignmentSource.AUTO_RULE)
               .reason(result.getReason())
               .rule(result.getMatchedRule())

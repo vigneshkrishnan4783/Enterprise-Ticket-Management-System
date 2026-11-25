@@ -1,6 +1,8 @@
 -- liquibase formatted sql
 
 -- changeset developer:0.0.5-assignment-rules-and-history-metadata
+-- validCheckSum: 9:317b703e9e0f7466be7c0ebbcbfc5a28
+-- validCheckSum: 9:4a46f27ffbddf25a5d59850cc7479a09
 CREATE TABLE IF NOT EXISTS assignment_rules (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(150) NOT NULL UNIQUE,
