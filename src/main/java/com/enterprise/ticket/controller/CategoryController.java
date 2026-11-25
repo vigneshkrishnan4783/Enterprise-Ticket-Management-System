@@ -19,9 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * REST controller managing configurable ticket categories and subcategories (FR-005).
- */
 @RestController
 @RequestMapping("/api/v1/categories")
 @RequiredArgsConstructor
@@ -33,30 +30,38 @@ public class CategoryController {
   @GetMapping
   @Operation(summary = "List categories", description = "Returns all active categories with their nested subcategories")
   public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllActiveCategories() {
-    List<CategoryResponse> categories = categoryService.getAllActiveCategories();
-    return ResponseBuilder.ok(categories);
+    return ResponseBuilder.<List<CategoryResponse>>builder()
+        .success()
+        .withData(categoryService.getAllActiveCategories())
+        .build();
   }
 
   @GetMapping("/{id}")
   @Operation(summary = "Get category by ID", description = "Retrieves category details by category ID")
   public ResponseEntity<ApiResponse<CategoryResponse>> getCategoryById(@PathVariable Long id) {
-    CategoryResponse category = categoryService.getCategoryById(id);
-    return ResponseBuilder.ok(category);
+    return ResponseBuilder.<CategoryResponse>builder()
+        .success()
+        .withData(categoryService.getCategoryById(id))
+        .build();
   }
 
   @PostMapping
   @Operation(summary = "Create category", description = "Creates a new root ticket category")
   public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
       @RequestBody CreateCategoryRequest request) {
-    CategoryResponse category = categoryService.createCategory(request);
-    return ResponseBuilder.created("Category created successfully", category);
+    return ResponseBuilder.<CategoryResponse>builder()
+        .created("Category created successfully")
+        .withData(categoryService.createCategory(request))
+        .build();
   }
 
   @PostMapping("/{id}/subcategories")
   @Operation(summary = "Create subcategory", description = "Creates a subcategory under a specified category")
   public ResponseEntity<ApiResponse<SubcategoryResponse>> createSubcategory(
       @PathVariable Long id, @RequestBody CreateSubcategoryRequest request) {
-    SubcategoryResponse subcategory = categoryService.createSubcategory(id, request);
-    return ResponseBuilder.created("Subcategory created successfully", subcategory);
+    return ResponseBuilder.<SubcategoryResponse>builder()
+        .created("Subcategory created successfully")
+        .withData(categoryService.createSubcategory(id, request))
+        .build();
   }
 }

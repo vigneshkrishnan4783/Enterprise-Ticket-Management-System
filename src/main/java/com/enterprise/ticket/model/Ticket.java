@@ -99,4 +99,11 @@ public class Ticket extends BaseEntity {
 
   @Column(name = "assigned_at")
   private java.time.Instant assignedAt;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "assignment_source", length = 50)
+  private com.enterprise.ticket.constant.AssignmentSource assignmentSource;
+
+  @Column(name = "assignment_reason", columnDefinition = "TEXT")
+  private String assignmentReason;
 }

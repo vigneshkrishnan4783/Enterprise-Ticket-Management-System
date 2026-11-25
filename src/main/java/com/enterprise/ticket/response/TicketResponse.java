@@ -40,6 +40,8 @@ public class TicketResponse {
   private Long assignedAgentId;
   private String assignedAgentUsername;
   private Instant assignedAt;
+  private com.enterprise.ticket.constant.AssignmentSource assignmentSource;
+  private String assignmentReason;
 
   private Instant createdAt;
   private Instant updatedAt;

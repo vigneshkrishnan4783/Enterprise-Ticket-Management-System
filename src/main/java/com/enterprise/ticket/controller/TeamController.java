@@ -28,26 +28,38 @@ public class TeamController {
   @GetMapping
   @Operation(summary = "List all active teams", description = "Retrieves active support teams and their assigned member agents")
   public ResponseEntity<ApiResponse<List<TeamResponse>>> getAllActiveTeams() {
-    return ResponseBuilder.ok(teamService.getAllActiveTeams());
+    return ResponseBuilder.<List<TeamResponse>>builder()
+        .success()
+        .withData(teamService.getAllActiveTeams())
+        .build();
   }
 
   @GetMapping("/{id}")
   @Operation(summary = "Get team by ID", description = "Retrieves team details by ID")
   public ResponseEntity<ApiResponse<TeamResponse>> getTeamById(@PathVariable Long id) {
-    return ResponseBuilder.ok(teamService.getTeamById(id));
+    return ResponseBuilder.<TeamResponse>builder()
+        .success()
+        .withData(teamService.getTeamById(id))
+        .build();
   }
 
   @PostMapping
   @Operation(summary = "Create team", description = "Creates a new support team")
   public ResponseEntity<ApiResponse<TeamResponse>> createTeam(
       @RequestBody CreateTeamRequest request) {
-    return ResponseBuilder.created("Team created successfully", teamService.createTeam(request));
+    return ResponseBuilder.<TeamResponse>builder()
+        .created("Team created successfully")
+        .withData(teamService.createTeam(request))
+        .build();
   }
 
   @PostMapping("/{teamId}/members/{userId}")
   @Operation(summary = "Add member to team", description = "Adds an agent/user to a support team")
   public ResponseEntity<ApiResponse<TeamResponse>> addMemberToTeam(
       @PathVariable Long teamId, @PathVariable Long userId) {
-    return ResponseBuilder.ok("Member added to team successfully", teamService.addMemberToTeam(teamId, userId));
+    return ResponseBuilder.<TeamResponse>builder()
+        .success("Member added to team successfully")
+        .withData(teamService.addMemberToTeam(teamId, userId))
+        .build();
   }
 }

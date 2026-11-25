@@ -43,24 +43,30 @@ public class TicketController {
   @Operation(summary = "Create ticket", description = "Creates a ticket with scope, impact/urgency priority matrix calculation")
   public ResponseEntity<ApiResponse<TicketResponse>> createTicket(
       @RequestBody CreateTicketRequest request, Principal principal) {
-    TicketResponse response = ticketService.createTicket(request, principal.getName());
-    return ResponseBuilder.created("Ticket created successfully", response);
+    return ResponseBuilder.<TicketResponse>builder()
+        .created("Ticket created successfully")
+        .withData(ticketService.createTicket(request, principal.getName()))
+        .build();
   }
 
   @GetMapping("/{ticketNumber}")
   @Operation(summary = "Get ticket by number", description = "Retrieves ticket details with ticket-level data access enforcement")
   public ResponseEntity<ApiResponse<TicketResponse>> getTicket(
       @PathVariable String ticketNumber, Principal principal) {
-    TicketResponse response = ticketService.getTicketByNumber(ticketNumber, principal.getName());
-    return ResponseBuilder.ok(response);
+    return ResponseBuilder.<TicketResponse>builder()
+        .success()
+        .withData(ticketService.getTicketByNumber(ticketNumber, principal.getName()))
+        .build();
   }
 
   @GetMapping("/ticket")
   @Operation(summary = "Get tickets", description = "Returns paginated list of tickets reported by authenticated user")
   public ResponseEntity<ApiResponse<Page<TicketResponse>>> getMyTickets(
       Principal principal, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-    Page<TicketResponse> response = ticketService.getMyTickets(principal.getName(), pageable);
-    return ResponseBuilder.ok(response);
+    return ResponseBuilder.<Page<TicketResponse>>builder()
+        .success()
+        .withData(ticketService.getMyTickets(principal.getName(), pageable))
+        .build();
   }
 
   @GetMapping("/search")
@@ -103,8 +109,10 @@ public class TicketController {
             .createdBefore(createdBefore)
             .build();
 
-    Page<TicketResponse> result = ticketService.searchTickets(filter, principal.getName(), pageable);
-    return ResponseBuilder.ok(result);
+    return ResponseBuilder.<Page<TicketResponse>>builder()
+        .success()
+        .withData(ticketService.searchTickets(filter, principal.getName(), pageable))
+        .build();
   }
 
   @PutMapping("/{ticketNumber}/assign")
@@ -113,16 +121,29 @@ public class TicketController {
       @PathVariable String ticketNumber,
       @RequestBody AssignTicketRequest request,
       Principal principal) {
-    TicketResponse response = ticketService.assignTicket(ticketNumber, request, principal.getName());
-    return ResponseBuilder.ok("Ticket assigned successfully", response);
+    return ResponseBuilder.<TicketResponse>builder()
+        .success("Ticket assigned successfully")
+        .withData(ticketService.assignTicket(ticketNumber, request, principal.getName()))
+        .build();
+  }
+
+  @PostMapping("/{ticketNumber}/auto-assign")
+  @Operation(summary = "Trigger automatic rule-based assignment", description = "Evaluates active assignment rules and auto-assigns ticket with source and reason audit")
+  public ResponseEntity<ApiResponse<TicketResponse>> autoAssignTicket(
+      @PathVariable String ticketNumber, Principal principal) {
+    return ResponseBuilder.<TicketResponse>builder()
+        .success("Ticket auto-assigned successfully")
+        .withData(ticketService.autoAssignTicket(ticketNumber, principal.getName()))
+        .build();
   }
 
   @GetMapping("/{ticketNumber}/history")
   @Operation(summary = "Get assignment history", description = "Retrieves full assignment and reassignment audit trail for a ticket")
   public ResponseEntity<ApiResponse<List<TicketAssignmentHistoryResponse>>> getAssignmentHistory(
       @PathVariable String ticketNumber, Principal principal) {
-    List<TicketAssignmentHistoryResponse> history =
-        ticketService.getAssignmentHistory(ticketNumber, principal.getName());
-    return ResponseBuilder.ok(history);
+    return ResponseBuilder.<List<TicketAssignmentHistoryResponse>>builder()
+        .success()
+        .withData(ticketService.getAssignmentHistory(ticketNumber, principal.getName()))
+        .build();
   }
 }

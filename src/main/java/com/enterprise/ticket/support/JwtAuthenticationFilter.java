@@ -50,7 +50,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
       }
     } catch (Exception ignored) {
-      // Security context remains null on invalid/expired token
     }
 
     filterChain.doFilter(request, response);

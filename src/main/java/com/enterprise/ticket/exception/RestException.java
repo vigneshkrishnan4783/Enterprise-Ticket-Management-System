@@ -3,10 +3,6 @@ package com.enterprise.ticket.exception;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
-/**
- * Custom application REST exception carrying HTTP status and user-friendly error message.
- * Replaces generic IllegalArgumentException across service and domain layers.
- */
 @Getter
 public class RestException extends RuntimeException {
 

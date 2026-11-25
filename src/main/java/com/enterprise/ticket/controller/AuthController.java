@@ -26,14 +26,18 @@ public class AuthController {
   @PostMapping("/register")
   @Operation(summary = "Register user", description = "Registers internal employee or external customer")
   public ResponseEntity<ApiResponse<AuthResponse>> register(@RequestBody RegisterRequest request) {
-    AuthResponse response = authService.register(request);
-    return ResponseBuilder.created("User registered successfully", response);
+    return ResponseBuilder.<AuthResponse>builder()
+        .created("User registered successfully")
+        .withData(authService.register(request))
+        .build();
   }
 
   @PostMapping("/login")
   @Operation(summary = "User login", description = "Authenticates user and returns JWT bearer token")
   public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody LoginRequest request) {
-    AuthResponse response = authService.login(request);
-    return ResponseBuilder.ok("Login successful", response);
+    return ResponseBuilder.<AuthResponse>builder()
+        .success("Login successful")
+        .withData(authService.login(request))
+        .build();
   }
 }

@@ -11,3 +11,6 @@ databaseChangeLog:
   - include:
       file: db.changelog/0.0.4-teams-and-assignments.sql
       relativeToChangelogFile: false
+  - include:
+      file: db.changelog/0.0.5-assignment-rules-and-history-metadata.sql
+      relativeToChangelogFile: false
