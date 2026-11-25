@@ -67,6 +67,14 @@ public class TicketTimelineService {
             .isInternal(isInternal)
             .build();
 
+    if (caller.getUserType() != UserType.EXTERNAL_CUSTOMER && ticket.getFirstRespondedAt() == null) {
+      ticket.setFirstRespondedAt(java.time.Instant.now());
+      if (ticket.getResponseDueAt() != null && ticket.getFirstRespondedAt().isAfter(ticket.getResponseDueAt())) {
+        ticket.setIsResponseBreached(true);
+      }
+      ticketRepository.save(ticket);
+    }
+
     return toCommentResponse(ticketCommentRepository.save(comment), ticket.getTicketNumber());
   }
 
@@ -127,6 +135,12 @@ public class TicketTimelineService {
     }
 
     ticket.setStatus(newStatus);
+    if ((newStatus == TicketStatus.RESOLVED || newStatus == TicketStatus.CLOSED) && ticket.getResolvedAt() == null) {
+      ticket.setResolvedAt(java.time.Instant.now());
+      if (ticket.getResolutionDueAt() != null && ticket.getResolvedAt().isAfter(ticket.getResolutionDueAt())) {
+        ticket.setIsResolutionBreached(true);
+      }
+    }
     ticket = ticketRepository.save(ticket);
 
     TicketStatusHistory history =

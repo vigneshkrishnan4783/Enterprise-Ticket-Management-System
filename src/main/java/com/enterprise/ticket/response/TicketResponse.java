@@ -43,6 +43,13 @@ public class TicketResponse {
   private com.enterprise.ticket.constant.AssignmentSource assignmentSource;
   private String assignmentReason;
 
+  private Instant responseDueAt;
+  private Instant resolutionDueAt;
+  private Instant firstRespondedAt;
+  private Instant resolvedAt;
+  private Boolean isResponseBreached;
+  private Boolean isResolutionBreached;
+
   private Instant createdAt;
   private Instant updatedAt;
 }
