@@ -9,13 +9,16 @@ public class RestException extends RuntimeException {
   private final HttpStatus status;
 
   public RestException(String message) {
-    super(message);
+    String sanitized = (message != null && !message.isBlank()) ? message.trim() : "Operation failed";
+    super(sanitized);
     this.status = HttpStatus.BAD_REQUEST;
   }
 
   public RestException(HttpStatus status, String message) {
-    super(message);
-    this.status = status;
+    HttpStatus resolvedStatus = (status != null) ? status : HttpStatus.INTERNAL_SERVER_ERROR;
+    String sanitized = (message != null && !message.isBlank()) ? message.trim() : resolvedStatus.getReasonPhrase();
+    super(sanitized);
+    this.status = resolvedStatus;
   }
 
   public static RestException badRequest(String message) {
