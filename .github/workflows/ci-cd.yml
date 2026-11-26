@@ -6,6 +6,7 @@ on:
       - main
       - 'FR-*'
       - 'feature/*'
+      - 'ci-cd-pipeline'
   pull_request:
     branches:
       - main
@@ -14,32 +15,35 @@ permissions:
   contents: read
 
 jobs:
-  build-and-verify:
-    name: Build & Code Verification (JDK 25)
+  build-test-verify:
+    name: Build, Test & Quality Gate (JDK 25)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Set up Java 25 (Early Access / GA)
+      - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
           java-version: '25'
           distribution: 'oracle'
           cache: 'maven'
 
-      - name: Verify Environment
+      - name: Verify JDK and Maven Environment
         run: |
           java -version
           mvn -v
 
-      - name: Compile and Validate Build
+      - name: Compile and Validate Code Standards
         run: mvn clean compile -B
 
-      - name: Package Application Artifact
+      - name: Run Automated Unit Tests & JaCoCo Coverage Check (50% Minimum)
+        run: mvn test -B
+
+      - name: Package Spring Boot Executable Artifact
         run: mvn package -DskipTests=true -B
 
-      - name: Verify Liquibase Changelog Master
+      - name: Verify Liquibase Master Migration Integrity
         run: |
           test -f src/main/resources/db.changelog/db.changelog-master.yaml || exit 1
