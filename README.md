@@ -38,10 +38,8 @@ The repository enforces automated continuous integration via GitHub Actions (`.g
 ### Pipeline Quality Gates & Rules:
 1. **Trigger Scope**: Automatically executes on Pull Requests to `main` and on pushes to `main`, `FR-*`, and `feature/*`.
 2. **JDK 25 Runtime**: Builds and verifies against clean Oracle/OpenJDK 25.
-3. **Automated Test & Coverage Rule (50% Minimum Gate)**:
-   - JaCoCo (`jacoco-maven-plugin`) enforces a strict **minimum 50% line coverage threshold**.
-   - If overall test coverage is **>= 50%**, the pipeline passes (`BUILD SUCCESS`).
-   - If overall test coverage falls **< 50%**, JaCoCo fails the build (`BUILD FAILURE`), preventing the PR from being merged.
+3. **Automated Unit Tests**:
+   - `mvn test` automatically verifies unit test cases on every push and pull request.
 4. **Zero Comment Standard**: Strict avoidance of `//` or `/** */` comments across production Java source files.
 5. **Database Migration Integrity**: Master Liquibase configuration (`db.changelog-master.yaml`) is validated before artifacts are packaged.
 
