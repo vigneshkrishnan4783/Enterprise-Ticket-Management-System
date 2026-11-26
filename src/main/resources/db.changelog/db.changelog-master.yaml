@@ -20,3 +20,9 @@ databaseChangeLog:
   - include:
       file: db.changelog/0.0.7-attachments-and-sla-deadlines.sql
       relativeToChangelogFile: false
+  - include:
+      file: db.changelog/0.0.8-business-calendars-and-sla-pause-rules.sql
+      relativeToChangelogFile: false
+  - include:
+      file: db.changelog/0.0.8.1-add-holiday-updated-at.sql
+      relativeToChangelogFile: false

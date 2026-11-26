@@ -6,6 +6,7 @@ import com.enterprise.ticket.response.ApiResponse;
 import com.enterprise.ticket.response.ResponseBuilder;
 import com.enterprise.ticket.response.TicketCommentResponse;
 import com.enterprise.ticket.response.TicketResponse;
+import com.enterprise.ticket.response.TicketSlaPauseIntervalResponse;
 import com.enterprise.ticket.response.TicketStatusHistoryResponse;
 import com.enterprise.ticket.service.TicketTimelineService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -71,6 +72,16 @@ public class TicketTimelineController {
     return ResponseBuilder.<List<TicketStatusHistoryResponse>>builder()
         .success()
         .withData(timelineService.getStatusHistory(ticketNumber, principal.getName()))
+        .build();
+  }
+
+  @GetMapping("/sla-pauses")
+  @Operation(summary = "Get SLA pause intervals", description = "Retrieves chronological SLA pause and resume intervals for a ticket")
+  public ResponseEntity<ApiResponse<List<TicketSlaPauseIntervalResponse>>> getSlaPauses(
+      @PathVariable String ticketNumber, Principal principal) {
+    return ResponseBuilder.<List<TicketSlaPauseIntervalResponse>>builder()
+        .success()
+        .withData(timelineService.getSlaPauseHistory(ticketNumber, principal.getName()))
         .build();
   }
 }

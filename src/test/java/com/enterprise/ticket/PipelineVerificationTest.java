@@ -51,7 +51,7 @@ class PipelineVerificationTest {
   @DisplayName("SlaCalculatorService should calculate fallback deadlines based on priority")
   void testSlaCalculator() {
     SlaPolicyRepository dummyRepo = new DummySlaPolicyRepository();
-    SlaCalculatorService service = new SlaCalculatorService(dummyRepo);
+    SlaCalculatorService service = new SlaCalculatorService(dummyRepo, null);
     Ticket ticket = Ticket.builder().priority(TicketPriority.CRITICAL).build();
 
     service.calculateDeadlines(ticket);

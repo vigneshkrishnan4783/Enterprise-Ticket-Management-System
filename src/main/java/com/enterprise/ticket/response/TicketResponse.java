@@ -49,6 +49,8 @@ public class TicketResponse {
   private Instant resolvedAt;
   private Boolean isResponseBreached;
   private Boolean isResolutionBreached;
+  private Long totalPausedDurationMinutes;
+  private Boolean isSlaPaused;
 
   private Instant createdAt;
   private Instant updatedAt;
