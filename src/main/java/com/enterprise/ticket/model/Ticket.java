@@ -126,4 +126,15 @@ public class Ticket extends BaseEntity {
   @Column(name = "is_resolution_breached", nullable = false)
   @Builder.Default
   private Boolean isResolutionBreached = false;
+
+  @Column(name = "total_paused_duration_minutes", nullable = false)
+  @Builder.Default
+  private Long totalPausedDurationMinutes = 0L;
+
+  @Column(name = "is_sla_paused", nullable = false)
+  @Builder.Default
+  private Boolean isSlaPaused = false;
+
+  @Column(name = "sla_last_paused_at")
+  private java.time.Instant slaLastPausedAt;
 }

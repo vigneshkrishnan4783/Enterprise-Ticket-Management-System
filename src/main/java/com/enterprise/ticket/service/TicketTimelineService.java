@@ -16,6 +16,7 @@ import com.enterprise.ticket.request.AddCommentRequest;
 import com.enterprise.ticket.request.UpdateTicketStatusRequest;
 import com.enterprise.ticket.response.TicketCommentResponse;
 import com.enterprise.ticket.response.TicketResponse;
+import com.enterprise.ticket.response.TicketSlaPauseIntervalResponse;
 import com.enterprise.ticket.response.TicketStatusHistoryResponse;
 import java.util.List;
 import java.util.Set;
@@ -33,6 +34,7 @@ public class TicketTimelineService {
   private final TicketCommentRepository ticketCommentRepository;
   private final TicketStatusHistoryRepository statusHistoryRepository;
   private final TicketService ticketService;
+  private final SlaPauseService slaPauseService;
 
   @Transactional
   public TicketCommentResponse addComment(
@@ -141,6 +143,12 @@ public class TicketTimelineService {
         ticket.setIsResolutionBreached(true);
       }
     }
+
+    if (slaPauseService != null) {
+      slaPauseService.handleStatusTransition(
+          ticket, previousStatus, newStatus, caller, request.getReason());
+    }
+
     ticket = ticketRepository.save(ticket);
 
     TicketStatusHistory history =
@@ -174,6 +182,25 @@ public class TicketTimelineService {
     return statusHistoryRepository.findByTicketIdOrderByCreatedAtAsc(ticket.getId()).stream()
         .map(h -> toStatusHistoryResponse(h, ticket.getTicketNumber()))
         .collect(Collectors.toList());
+  }
+
+  @Transactional(readOnly = true)
+  public List<TicketSlaPauseIntervalResponse> getSlaPauseHistory(
+      String ticketNumber, String username) {
+    User caller =
+        userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> RestException.notFound("User not found: " + username));
+
+    Ticket ticket =
+        ticketRepository
+            .findByTicketNumber(ticketNumber.trim())
+            .orElseThrow(
+                () -> RestException.notFound("Ticket not found with number: " + ticketNumber));
+
+    enforceTicketAccess(ticket, caller, "view SLA pause history of");
+
+    return slaPauseService.getPauseIntervals(ticket.getId(), ticket.getTicketNumber());
   }
 
   private void enforceTicketAccess(Ticket ticket, User caller, String action) {

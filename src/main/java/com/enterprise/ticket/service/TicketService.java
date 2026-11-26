@@ -537,6 +537,8 @@ public class TicketService {
         .resolvedAt(ticket.getResolvedAt())
         .isResponseBreached(ticket.getIsResponseBreached())
         .isResolutionBreached(ticket.getIsResolutionBreached())
+        .totalPausedDurationMinutes(ticket.getTotalPausedDurationMinutes())
+        .isSlaPaused(ticket.getIsSlaPaused())
         .createdAt(ticket.getCreatedAt())
         .updatedAt(ticket.getUpdatedAt())
         .build();
