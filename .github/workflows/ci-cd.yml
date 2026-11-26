@@ -1,0 +1,45 @@
+name: Enterprise Ticket Management System CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - 'FR-*'
+      - 'feature/*'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-verify:
+    name: Build & Code Verification (JDK 25)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 25 (Early Access / GA)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'oracle'
+          cache: 'maven'
+
+      - name: Verify Environment
+        run: |
+          java -version
+          mvn -v
+
+      - name: Compile and Validate Build
+        run: mvn clean compile -B
+
+      - name: Package Application Artifact
+        run: mvn package -DskipTests=true -B
+
+      - name: Verify Liquibase Changelog Master
+        run: |
+          test -f src/main/resources/db.changelog/db.changelog-master.yaml || exit 1
