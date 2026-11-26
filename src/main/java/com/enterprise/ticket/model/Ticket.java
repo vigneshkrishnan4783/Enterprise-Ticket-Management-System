@@ -137,4 +137,12 @@ public class Ticket extends BaseEntity {
 
   @Column(name = "sla_last_paused_at")
   private java.time.Instant slaLastPausedAt;
+
+  @Column(name = "escalation_level", nullable = false)
+  @Builder.Default
+  private Integer escalationLevel = 0;
+
+  @Column(name = "is_escalated", nullable = false)
+  @Builder.Default
+  private Boolean isEscalated = false;
 }

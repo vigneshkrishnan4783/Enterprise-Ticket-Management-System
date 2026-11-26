@@ -39,4 +39,8 @@ public class Role {
   @Column(name = "created_at", nullable = false, updatable = false)
   @Builder.Default
   private Instant createdAt = Instant.now();
+
+  public RoleType getName() {
+    return name;
+  }
 }
