@@ -38,10 +38,13 @@ The repository enforces automated continuous integration via GitHub Actions (`.g
 ### Pipeline Quality Gates & Rules:
 1. **Trigger Scope**: Automatically executes on Pull Requests to `main` and on pushes to `main`, `FR-*`, and `feature/*`.
 2. **JDK 25 Runtime**: Builds and verifies against clean Oracle/OpenJDK 25.
-3. **Automated Unit Tests**:
+3. **Spotless Code Formatting Check**:
+   - `mvn spotless:check` verifies code formatting, clean imports, trailing whitespace removal, and standard 2-space indentation.
+   - Run `mvn spotless:apply` locally to automatically format all files before committing.
+4. **Automated Unit Tests**:
    - `mvn test` automatically verifies unit test cases on every push and pull request.
-4. **Zero Comment Standard**: Strict avoidance of `//` or `/** */` comments across production Java source files.
-5. **Database Migration Integrity**: Master Liquibase configuration (`db.changelog-master.yaml`) is validated before artifacts are packaged.
+5. **Zero Comment Standard**: Strict avoidance of `//` or `/** */` comments across production Java source files.
+6. **Database Migration Integrity**: Master Liquibase configuration (`db.changelog-master.yaml`) is validated before artifacts are packaged.
 
 ## 4. Standard Pull Request (PR) Format
 

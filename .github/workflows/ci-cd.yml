@@ -38,6 +38,9 @@ jobs:
       - name: Compile and Validate Code Standards
         run: mvn clean compile -B
 
+      - name: Verify Code Style & Spotless Formatting
+        run: mvn spotless:check -B
+
       - name: Run Automated Unit Tests
         run: mvn test -B
 
