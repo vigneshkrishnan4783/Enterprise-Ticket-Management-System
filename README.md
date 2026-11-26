@@ -10,9 +10,6 @@ Database	PostgreSQL 17 / 18
 Liquibase	5.0.4
 
 
-
-
-
 ## 2. Local Setup & Build Instructions
 
 ### Step 1: Start PostgreSQL Service
@@ -41,12 +38,15 @@ The repository enforces automated continuous integration via GitHub Actions (`.g
 ### Pipeline Quality Gates & Rules:
 1. **Trigger Scope**: Automatically executes on Pull Requests to `main` and on pushes to `main`, `FR-*`, and `feature/*`.
 2. **JDK 25 Runtime**: Builds and verifies against clean Oracle/OpenJDK 25.
-3. **Automated Test & Coverage Rule (50% Minimum Gate)**:
+3. **Spotless Code Formatting Check**:
+   - `mvn spotless:check` verifies strict Google Java code formatting and import cleanliness before tests are executed.
+   - Run `mvn spotless:apply` locally to auto-format any changed files.
+4. **Automated Test & Coverage Rule (50% Minimum Gate)**:
    - JaCoCo (`jacoco-maven-plugin`) enforces a strict **minimum 50% line coverage threshold**.
    - If overall test coverage is **>= 50%**, the pipeline passes (`BUILD SUCCESS`).
    - If overall test coverage falls **< 50%**, JaCoCo fails the build (`BUILD FAILURE`), preventing the PR from being merged.
-4. **Zero Comment Standard**: Strict avoidance of `//` or `/** */` comments across production Java source files.
-5. **Database Migration Integrity**: Master Liquibase configuration (`db.changelog-master.yaml`) is validated before artifacts are packaged.
+5. **Zero Comment Standard**: Strict avoidance of `//` or `/** */` comments across production Java source files.
+6. **Database Migration Integrity**: Master Liquibase configuration (`db.changelog-master.yaml`) is validated before artifacts are packaged.
 
 
 
