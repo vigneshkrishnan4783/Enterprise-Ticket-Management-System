@@ -48,6 +48,36 @@ The repository enforces automated continuous integration via GitHub Actions (`.g
 5. **Zero Comment Standard**: Strict avoidance of `//` or `/** */` comments across production Java source files.
 6. **Database Migration Integrity**: Master Liquibase configuration (`db.changelog-master.yaml`) is validated before artifacts are packaged.
 
+## 4. Standard Pull Request (PR) Format
+
+All Pull Requests targeting `main` must adhere to the standardized format below:
+
+### PR Title Convention:
+`FR-XXX : concise description in imperative mood`
+* Example: `FR-001 : implement user authentication and ticket creation sequence`
+* Example: `FR-006 : implement public replies private notes and status history`
+* Example: `FR-007 : implement secure attachment upload download and calculate SLA deadlines`
+* Example: `FR-008 : configure CI/CD pipeline with spotless check and 50% test coverage gate`
+### PR Title Convention:
+`FR - XXX : concise description in imperative mood`
+* Example: `FR - 001 : implement user authentication and ticket creation sequence`
+
+### PR Description Template:
+```markdown
+### Summary of Changes:
+- Bullet points detailing features or fixes introduced.
+
+### Quality Gate Check Sequence:
+1. `mvn clean compile -B` (Build & Zero Comment check)
+2. `mvn spotless:check -B` (Code style & formatting check)
+3. `mvn test -B` (Unit test execution + 50% JaCoCo coverage check)
+4. `mvn package -DskipTests=true -B` (Packaging verification)
+
+### Verification & Testing:
+- Local test results and Postman endpoint verification notes.
+```
+
+
 
 
 
