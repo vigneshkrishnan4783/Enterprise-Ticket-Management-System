@@ -4,6 +4,7 @@ import com.enterprise.ticket.constant.RoleType;
 import com.enterprise.ticket.constant.TicketStatus;
 import com.enterprise.ticket.constant.UserType;
 import com.enterprise.ticket.exception.RestException;
+import com.enterprise.ticket.model.NotificationEventType;
 import com.enterprise.ticket.model.Ticket;
 import com.enterprise.ticket.model.TicketComment;
 import com.enterprise.ticket.model.TicketStatusHistory;
@@ -35,6 +36,7 @@ public class TicketTimelineService {
   private final TicketStatusHistoryRepository statusHistoryRepository;
   private final TicketService ticketService;
   private final SlaPauseService slaPauseService;
+  private final NotificationService notificationService;
 
   @Transactional
   public TicketCommentResponse addComment(
@@ -77,7 +79,29 @@ public class TicketTimelineService {
       ticketRepository.save(ticket);
     }
 
-    return toCommentResponse(ticketCommentRepository.save(comment), ticket.getTicketNumber());
+    TicketComment savedComment = ticketCommentRepository.save(comment);
+
+    if (notificationService != null && !Boolean.TRUE.equals(request.getIsInternal())) {
+      if (caller.getId().equals(ticket.getReporter().getId())) {
+        if (ticket.getAssignedAgent() != null) {
+          notificationService.createNotification(
+              ticket.getAssignedAgent(),
+              ticket,
+              NotificationEventType.COMMENT_ADDED,
+              "New reply on ticket " + ticket.getTicketNumber(),
+              "Requester posted a new reply on ticket " + ticket.getTicketNumber() + ": " + savedComment.getBody());
+        }
+      } else {
+        notificationService.createNotification(
+            ticket.getReporter(),
+            ticket,
+            NotificationEventType.COMMENT_ADDED,
+            "New reply on ticket " + ticket.getTicketNumber(),
+            "A support reply was posted on ticket " + ticket.getTicketNumber() + ": " + savedComment.getBody());
+      }
+    }
+
+    return toCommentResponse(savedComment, ticket.getTicketNumber());
   }
 
   @Transactional(readOnly = true)
@@ -160,6 +184,23 @@ public class TicketTimelineService {
             .reason(request.getReason() != null ? request.getReason().trim() : null)
             .build();
     statusHistoryRepository.save(history);
+
+    if (notificationService != null) {
+      notificationService.createNotification(
+          ticket.getReporter(),
+          ticket,
+          NotificationEventType.STATUS_CHANGED,
+          "Ticket " + ticket.getTicketNumber() + " status updated",
+          "Status changed from " + previousStatus + " to " + newStatus);
+      if (ticket.getAssignedAgent() != null && !ticket.getAssignedAgent().getId().equals(caller.getId())) {
+        notificationService.createNotification(
+            ticket.getAssignedAgent(),
+            ticket,
+            NotificationEventType.STATUS_CHANGED,
+            "Ticket " + ticket.getTicketNumber() + " status updated",
+            "Status changed from " + previousStatus + " to " + newStatus + " by " + caller.getUsername());
+      }
+    }
 
     return ticketService.getTicketByNumber(ticketNumber, username);
   }

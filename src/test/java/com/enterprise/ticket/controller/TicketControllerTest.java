@@ -24,7 +24,7 @@ class TicketControllerTest {
     TicketService dummyTicketService =
         new TicketService(
             null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            null) {
+            null, null) {
           @Override
           public TicketResponse createTicket(CreateTicketRequest request, String username) {
             return TicketResponse.builder()
@@ -59,7 +59,7 @@ class TicketControllerTest {
     TicketService dummyTicketService =
         new TicketService(
             null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            null) {
+            null, null) {
           @Override
           public TicketResponse getTicketByNumber(String ticketNumber, String username) {
             return TicketResponse.builder()

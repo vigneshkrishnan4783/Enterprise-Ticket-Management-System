@@ -16,7 +16,7 @@ class TicketServiceTest {
     TicketService service =
         new TicketService(
             null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            null);
+            null, null);
     RestException ex = assertThrows(RestException.class, () -> service.createTicket(null, "user"));
     assertEquals("Create ticket payload cannot be empty", ex.getMessage());
   }
@@ -27,7 +27,7 @@ class TicketServiceTest {
     TicketService service =
         new TicketService(
             null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            null);
+            null, null);
     CreateTicketRequest req = CreateTicketRequest.builder().title("abc").description("Valid description").build();
     RestException ex = assertThrows(RestException.class, () -> service.createTicket(req, "user"));
     assertEquals("Title is required and must be at least 5 characters", ex.getMessage());
@@ -39,7 +39,7 @@ class TicketServiceTest {
     TicketService service =
         new TicketService(
             null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            null);
+            null, null);
     CreateTicketRequest req = CreateTicketRequest.builder().title("Valid Title Here").description("  ").build();
     RestException ex = assertThrows(RestException.class, () -> service.createTicket(req, "user"));
     assertEquals("Description is required", ex.getMessage());
@@ -51,7 +51,7 @@ class TicketServiceTest {
     TicketService service =
         new TicketService(
             null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            null);
+            null, null);
     RestException ex = assertThrows(RestException.class, () -> service.getTicketByNumber("   ", "user"));
     assertEquals("Ticket number is required", ex.getMessage());
   }

@@ -10,6 +10,7 @@ import com.enterprise.ticket.exception.RestException;
 import com.enterprise.ticket.model.Asset;
 import com.enterprise.ticket.model.Category;
 import com.enterprise.ticket.model.Impact;
+import com.enterprise.ticket.model.NotificationEventType;
 import com.enterprise.ticket.model.Organization;
 import com.enterprise.ticket.model.Site;
 import com.enterprise.ticket.model.Subcategory;
@@ -68,6 +69,7 @@ public class TicketService {
   private final AssignmentRuleEngine assignmentRuleEngine;
   private final SlaCalculatorService slaCalculatorService;
   private final TicketNumberGenerator ticketNumberGenerator;
+  private final NotificationService notificationService;
 
   @Transactional
   public TicketResponse createTicket(CreateTicketRequest request, String reporterUsername) {
@@ -221,6 +223,23 @@ public class TicketService {
       ticket = ticketRepository.save(ticket);
     }
 
+    if (notificationService != null) {
+      notificationService.createNotification(
+          ticket.getReporter(),
+          ticket,
+          NotificationEventType.TICKET_CREATED,
+          "Ticket Created: " + ticket.getTicketNumber(),
+          "Your ticket " + ticket.getTicketNumber() + " (" + ticket.getTitle() + ") has been submitted successfully.");
+      if (ticket.getAssignedAgent() != null) {
+        notificationService.createNotification(
+            ticket.getAssignedAgent(),
+            ticket,
+            NotificationEventType.TICKET_ASSIGNED,
+            "Ticket Assigned: " + ticket.getTicketNumber(),
+            "You have been assigned to ticket " + ticket.getTicketNumber() + ": " + ticket.getTitle());
+      }
+    }
+
     return toTicketResponse(ticket);
   }
 
@@ -356,6 +375,15 @@ public class TicketService {
             .build();
     assignmentHistoryRepository.save(history);
 
+    if (notificationService != null && newAgent != null && (previousAgent == null || !previousAgent.getId().equals(newAgent.getId()))) {
+      notificationService.createNotification(
+          newAgent,
+          ticket,
+          NotificationEventType.TICKET_ASSIGNED,
+          "Ticket Assigned: " + ticket.getTicketNumber(),
+          "You have been assigned to ticket " + ticket.getTicketNumber() + " by " + assigner.getUsername());
+    }
+
     return toTicketResponse(ticket);
   }
 
@@ -432,6 +460,15 @@ public class TicketService {
             .comment("Triggered rule-based automatic assignment")
             .build();
     assignmentHistoryRepository.save(history);
+
+    if (notificationService != null && result.getTargetAgent() != null && (previousAgent == null || !previousAgent.getId().equals(result.getTargetAgent().getId()))) {
+      notificationService.createNotification(
+          result.getTargetAgent(),
+          ticket,
+          NotificationEventType.TICKET_ASSIGNED,
+          "Ticket Assigned: " + ticket.getTicketNumber(),
+          "You have been auto-assigned to ticket " + ticket.getTicketNumber());
+    }
 
     return toTicketResponse(ticket);
   }

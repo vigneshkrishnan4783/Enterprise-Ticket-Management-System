@@ -26,3 +26,6 @@ databaseChangeLog:
   - include:
       file: db.changelog/0.0.8.1-add-holiday-updated-at.sql
       relativeToChangelogFile: false
+  - include:
+      file: db.changelog/0.0.9-ticket-notifications.sql
+      relativeToChangelogFile: false
