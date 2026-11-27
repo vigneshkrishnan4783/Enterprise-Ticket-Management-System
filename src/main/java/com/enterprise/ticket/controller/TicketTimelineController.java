@@ -1,16 +1,20 @@
 package com.enterprise.ticket.controller;
 
 import com.enterprise.ticket.request.AddCommentRequest;
+import com.enterprise.ticket.request.EscalateTicketRequest;
 import com.enterprise.ticket.request.UpdateTicketStatusRequest;
 import com.enterprise.ticket.response.ApiResponse;
 import com.enterprise.ticket.response.ResponseBuilder;
 import com.enterprise.ticket.response.TicketCommentResponse;
+import com.enterprise.ticket.response.TicketEscalationHistoryResponse;
 import com.enterprise.ticket.response.TicketResponse;
 import com.enterprise.ticket.response.TicketSlaPauseIntervalResponse;
 import com.enterprise.ticket.response.TicketStatusHistoryResponse;
+import com.enterprise.ticket.service.EscalationService;
 import com.enterprise.ticket.service.TicketTimelineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class TicketTimelineController {
 
   private final TicketTimelineService timelineService;
+  private final EscalationService escalationService;
 
   @PostMapping("/comments")
   @Operation(summary = "Add comment or private note", description = "Adds a public reply or private internal note to a ticket")
@@ -82,6 +87,28 @@ public class TicketTimelineController {
     return ResponseBuilder.<List<TicketSlaPauseIntervalResponse>>builder()
         .success()
         .withData(timelineService.getSlaPauseHistory(ticketNumber, principal.getName()))
+        .build();
+  }
+
+  @PostMapping("/escalate")
+  @Operation(summary = "Escalate ticket", description = "Escalates a ticket to a higher support tier or manager and records escalation history")
+  public ResponseEntity<ApiResponse<TicketEscalationHistoryResponse>> escalateTicket(
+      @PathVariable String ticketNumber,
+      @Valid @RequestBody EscalateTicketRequest request,
+      Principal principal) {
+    return ResponseBuilder.<TicketEscalationHistoryResponse>builder()
+        .success("Ticket escalated successfully")
+        .withData(escalationService.escalateTicket(ticketNumber, request, principal.getName()))
+        .build();
+  }
+
+  @GetMapping("/escalation-history")
+  @Operation(summary = "Get escalation history", description = "Retrieves chronological escalation audit history for a ticket")
+  public ResponseEntity<ApiResponse<List<TicketEscalationHistoryResponse>>> getEscalationHistory(
+      @PathVariable String ticketNumber, Principal principal) {
+    return ResponseBuilder.<List<TicketEscalationHistoryResponse>>builder()
+        .success()
+        .withData(escalationService.getEscalationHistory(ticketNumber, principal.getName()))
         .build();
   }
 }
