@@ -56,6 +56,8 @@ public class TicketResponse {
   private com.enterprise.ticket.constant.ResolutionCode resolutionCode;
   private String resolutionNotes;
   private String resolvedByUsername;
+  private Integer reopenCount;
+  private Instant closedAt;
 
   private Instant createdAt;
   private Instant updatedAt;

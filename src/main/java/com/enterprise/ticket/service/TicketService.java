@@ -582,6 +582,8 @@ public class TicketService {
         .resolutionNotes(ticket.getResolutionNotes())
         .resolvedByUsername(
             ticket.getResolvedBy() != null ? ticket.getResolvedBy().getUsername() : null)
+        .reopenCount(ticket.getReopenCount())
+        .closedAt(ticket.getClosedAt())
         .createdAt(ticket.getCreatedAt())
         .updatedAt(ticket.getUpdatedAt())
         .build();

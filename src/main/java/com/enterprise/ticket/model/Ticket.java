@@ -156,4 +156,11 @@ public class Ticket extends BaseEntity {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "resolved_by_id")
   private User resolvedBy;
+
+  @Column(name = "reopen_count", nullable = false)
+  @Builder.Default
+  private Integer reopenCount = 0;
+
+  @Column(name = "closed_at")
+  private java.time.Instant closedAt;
 }
