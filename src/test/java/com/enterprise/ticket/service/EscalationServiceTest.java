@@ -324,6 +324,11 @@ class EscalationServiceTest {
     }
 
     @Override
+    public List<Ticket> findByStatus(com.enterprise.ticket.constant.TicketStatus status) {
+      return tickets.stream().filter(t -> status == t.getStatus()).toList();
+    }
+
+    @Override
     public <S extends Ticket> S save(S entity) {
       return entity;
     }

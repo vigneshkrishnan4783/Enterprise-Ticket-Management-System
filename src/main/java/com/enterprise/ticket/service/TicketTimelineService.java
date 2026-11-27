@@ -22,12 +22,11 @@ import com.enterprise.ticket.response.TicketStatusHistoryResponse;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class TicketTimelineService {
 
   private final TicketRepository ticketRepository;
@@ -37,6 +36,46 @@ public class TicketTimelineService {
   private final TicketService ticketService;
   private final SlaPauseService slaPauseService;
   private final NotificationService notificationService;
+  private final TicketLifecyclePolicyService lifecyclePolicyService;
+
+  @Autowired
+  public TicketTimelineService(
+      TicketRepository ticketRepository,
+      UserRepository userRepository,
+      TicketCommentRepository ticketCommentRepository,
+      TicketStatusHistoryRepository statusHistoryRepository,
+      TicketService ticketService,
+      @Autowired(required = false) SlaPauseService slaPauseService,
+      @Autowired(required = false) NotificationService notificationService,
+      @Autowired(required = false) TicketLifecyclePolicyService lifecyclePolicyService) {
+    this.ticketRepository = ticketRepository;
+    this.userRepository = userRepository;
+    this.ticketCommentRepository = ticketCommentRepository;
+    this.statusHistoryRepository = statusHistoryRepository;
+    this.ticketService = ticketService;
+    this.slaPauseService = slaPauseService;
+    this.notificationService = notificationService;
+    this.lifecyclePolicyService = lifecyclePolicyService;
+  }
+
+  public TicketTimelineService(
+      TicketRepository ticketRepository,
+      UserRepository userRepository,
+      TicketCommentRepository ticketCommentRepository,
+      TicketStatusHistoryRepository statusHistoryRepository,
+      TicketService ticketService,
+      SlaPauseService slaPauseService,
+      NotificationService notificationService) {
+    this(
+        ticketRepository,
+        userRepository,
+        ticketCommentRepository,
+        statusHistoryRepository,
+        ticketService,
+        slaPauseService,
+        notificationService,
+        null);
+  }
 
   @Transactional
   public TicketCommentResponse addComment(
@@ -166,6 +205,10 @@ public class TicketTimelineService {
           "Resolution details (resolutionNotes) are required before resolving a ticket");
     }
 
+    if (newStatus == TicketStatus.REOPENED && lifecyclePolicyService != null) {
+      lifecyclePolicyService.validateAndRecordReopen(ticket, caller);
+    }
+
     ticket.setStatus(newStatus);
     if (newStatus == TicketStatus.RESOLVED) {
       ticket.setResolutionNotes(request.getResolutionNotes().trim());
@@ -179,6 +222,9 @@ public class TicketTimelineService {
       if (ticket.getResolutionDueAt() != null && ticket.getResolvedAt().isAfter(ticket.getResolutionDueAt())) {
         ticket.setIsResolutionBreached(true);
       }
+    }
+    if (newStatus == TicketStatus.CLOSED && ticket.getClosedAt() == null) {
+      ticket.setClosedAt(java.time.Instant.now());
     }
 
     if (slaPauseService != null) {

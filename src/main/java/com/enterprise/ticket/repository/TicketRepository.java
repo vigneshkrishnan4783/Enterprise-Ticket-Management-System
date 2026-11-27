@@ -1,6 +1,8 @@
 package com.enterprise.ticket.repository;
 
+import com.enterprise.ticket.constant.TicketStatus;
 import com.enterprise.ticket.model.Ticket;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +18,8 @@ public interface TicketRepository
   Optional<Ticket> findByTicketNumber(String ticketNumber);
 
   Page<Ticket> findByReporterId(Long reporterId, Pageable pageable);
+
+  List<Ticket> findByStatus(TicketStatus status);
 
   @Query(value = "SELECT nextval('ticket_seq')", nativeQuery = true)
   Long getNextTicketSequence();
