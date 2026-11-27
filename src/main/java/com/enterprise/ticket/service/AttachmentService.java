@@ -22,7 +22,6 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -36,8 +35,8 @@ import org.springframework.web.multipart.MultipartFile;
 public class AttachmentService {
 
   private static final long MAX_FILE_SIZE = 25 * 1024 * 1024L;
-  private static final Set<String> ALLOWED_EXTENSIONS = Set.of("pdf", "png", "jpg", "jpeg", "doc", "docx", "xls",
-      "xlsx", "txt", "log", "zip");
+  private static final Set<String> ALLOWED_EXTENSIONS =
+      Set.of("pdf", "png", "jpg", "jpeg", "doc", "docx", "xls", "xlsx", "txt", "log", "zip");
   private static final Path STORAGE_ROOT = Paths.get("uploads", "attachments").toAbsolutePath().normalize();
 
   private final TicketRepository ticketRepository;
@@ -53,14 +52,16 @@ public class AttachmentService {
       throw RestException.badRequest("File exceeds maximum allowed size of 25MB");
     }
 
-    User caller = userRepository
-        .findByUsername(username)
-        .orElseThrow(() -> RestException.notFound("User not found: " + username));
+    User caller =
+        userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> RestException.notFound("User not found: " + username));
 
-    Ticket ticket = ticketRepository
-        .findByTicketNumber(ticketNumber.trim())
-        .orElseThrow(
-            () -> RestException.notFound("Ticket not found with number: " + ticketNumber));
+    Ticket ticket =
+        ticketRepository
+            .findByTicketNumber(ticketNumber.trim())
+            .orElseThrow(
+                () -> RestException.notFound("Ticket not found with number: " + ticketNumber));
 
     enforceTicketAccess(ticket, caller, "upload attachment to");
 
@@ -95,16 +96,17 @@ public class AttachmentService {
         contentType = "application/octet-stream";
       }
 
-      TicketAttachment attachment = TicketAttachment.builder()
-          .ticket(ticket)
-          .fileName(storedFileName)
-          .originalFileName(originalFileName)
-          .storagePath(targetFilePath.toString())
-          .contentType(contentType)
-          .fileSizeBytes(file.getSize())
-          .checksumSha256(checksum)
-          .uploadedBy(caller)
-          .build();
+      TicketAttachment attachment =
+          TicketAttachment.builder()
+              .ticket(ticket)
+              .fileName(storedFileName)
+              .originalFileName(originalFileName)
+              .storagePath(targetFilePath.toString())
+              .contentType(contentType)
+              .fileSizeBytes(file.getSize())
+              .checksumSha256(checksum)
+              .uploadedBy(caller)
+              .build();
 
       TicketAttachment saved = attachmentRepository.save(attachment);
       return toAttachmentResponse(saved);
@@ -115,14 +117,16 @@ public class AttachmentService {
 
   @Transactional(readOnly = true)
   public List<AttachmentResponse> getTicketAttachments(String ticketNumber, String username) {
-    User caller = userRepository
-        .findByUsername(username)
-        .orElseThrow(() -> RestException.notFound("User not found: " + username));
+    User caller =
+        userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> RestException.notFound("User not found: " + username));
 
-    Ticket ticket = ticketRepository
-        .findByTicketNumber(ticketNumber.trim())
-        .orElseThrow(
-            () -> RestException.notFound("Ticket not found with number: " + ticketNumber));
+    Ticket ticket =
+        ticketRepository
+            .findByTicketNumber(ticketNumber.trim())
+            .orElseThrow(
+                () -> RestException.notFound("Ticket not found with number: " + ticketNumber));
 
     enforceTicketAccess(ticket, caller, "view attachments for");
 
@@ -134,21 +138,24 @@ public class AttachmentService {
   @Transactional(readOnly = true)
   public DownloadAttachmentResult downloadAttachment(
       String ticketNumber, Long attachmentId, String username) {
-    User caller = userRepository
-        .findByUsername(username)
-        .orElseThrow(() -> RestException.notFound("User not found: " + username));
+    User caller =
+        userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> RestException.notFound("User not found: " + username));
 
-    Ticket ticket = ticketRepository
-        .findByTicketNumber(ticketNumber.trim())
-        .orElseThrow(
-            () -> RestException.notFound("Ticket not found with number: " + ticketNumber));
+    Ticket ticket =
+        ticketRepository
+            .findByTicketNumber(ticketNumber.trim())
+            .orElseThrow(
+                () -> RestException.notFound("Ticket not found with number: " + ticketNumber));
 
     enforceTicketAccess(ticket, caller, "download attachment from");
 
-    TicketAttachment attachment = attachmentRepository
-        .findById(attachmentId)
-        .orElseThrow(
-            () -> RestException.notFound("Attachment not found with id: " + attachmentId));
+    TicketAttachment attachment =
+        attachmentRepository
+            .findById(attachmentId)
+            .orElseThrow(
+                () -> RestException.notFound("Attachment not found with id: " + attachmentId));
 
     if (!attachment.getTicket().getId().equals(ticket.getId())) {
       throw RestException.badRequest("Attachment does not belong to ticket " + ticketNumber);
@@ -161,30 +168,28 @@ public class AttachmentService {
       }
 
       Resource resource = new UrlResource(filePath.toUri());
-      return new DownloadAttachmentResult(resource, attachment.getOriginalFileName(), attachment.getContentType(),
-          attachment.getFileSizeBytes());
-    } catch (RestException re) {
-      throw re;
+      return new DownloadAttachmentResult(resource, attachment.getOriginalFileName(), attachment.getContentType(), attachment.getFileSizeBytes());
     } catch (Exception e) {
       throw RestException.badRequest("Could not read attachment file: " + e.getMessage());
     }
   }
 
   private void enforceTicketAccess(Ticket ticket, User caller, String action) {
-    Set<RoleType> roles =
-        caller.getRoles().stream().map(r -> r.getName()).collect(Collectors.toSet());
-
-    if (roles.contains(RoleType.ROLE_ADMIN)) {
+    boolean isAdmin =
+        caller.getRoles() != null
+            && caller.getRoles().stream().anyMatch(r -> r.getName() == RoleType.ROLE_ADMIN);
+    if (isAdmin) {
       return;
     }
 
     if (caller.getUserType() == UserType.EXTERNAL_CUSTOMER) {
       boolean isReporter = ticket.getReporter().getId().equals(caller.getId());
-      boolean isSameOrg = ticket.getOrganization() != null
-          && (ticket.getOrganization().getName().equalsIgnoreCase(caller.getOrganizationName())
-              || (caller.getOrganizations() != null
-                  && caller.getOrganizations().stream()
-                      .anyMatch(o -> o.getId().equals(ticket.getOrganization().getId()))));
+      boolean isSameOrg =
+          ticket.getOrganization() != null
+              && (ticket.getOrganization().getName().equalsIgnoreCase(caller.getOrganizationName())
+                  || (caller.getOrganizations() != null
+                      && caller.getOrganizations().stream()
+                          .anyMatch(o -> o.getId().equals(ticket.getOrganization().getId()))));
 
       if (!isReporter && !isSameOrg) {
         throw RestException.forbidden(
@@ -194,13 +199,17 @@ public class AttachmentService {
     }
 
     boolean isReporter = ticket.getReporter().getId().equals(caller.getId());
-    boolean isAssignedAgent = ticket.getAssignedAgent() != null
-        && ticket.getAssignedAgent().getId().equals(caller.getId());
-    boolean isAssignedTeamMember = ticket.getAssignedTeam() != null
-        && ticket.getAssignedTeam().getMembers().stream()
-            .anyMatch(m -> m.getId().equals(caller.getId()));
+    boolean isAssignedAgent =
+        ticket.getAssignedAgent() != null && ticket.getAssignedAgent().getId().equals(caller.getId());
+    boolean isAssignedTeamMember =
+        ticket.getAssignedTeam() != null
+            && ticket.getAssignedTeam().getMembers().stream()
+                .anyMatch(m -> m.getId().equals(caller.getId()));
+    boolean isAgent =
+        caller.getRoles() != null
+            && caller.getRoles().stream().anyMatch(r -> r.getName() == RoleType.ROLE_AGENT);
 
-    if (!isReporter && !isAssignedAgent && !isAssignedTeamMember && !roles.contains(RoleType.ROLE_AGENT)) {
+    if (!isReporter && !isAssignedAgent && !isAssignedTeamMember && !isAgent) {
       throw RestException.forbidden(
           "Access denied: You are not authorized to " + action + " ticket " + ticket.getTicketNumber());
     }
@@ -249,6 +258,6 @@ public class AttachmentService {
       Resource resource,
       String originalFileName,
       String contentType,
-      Long fileSizeBytes) {
-  }
+      Long fileSizeBytes
+  ) {}
 }

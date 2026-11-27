@@ -29,6 +29,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.repository.query.FluentQuery;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 class NotificationServiceTest {
 
@@ -73,6 +76,33 @@ class NotificationServiceTest {
         null, testTicket, NotificationEventType.TICKET_CREATED, "Ticket Created", "Message");
 
     assertTrue(notificationRepository.notifications.isEmpty());
+  }
+
+  @Test
+  @DisplayName("createNotification should broadcast via WebSocket when messagingTemplate is present")
+  void testCreateNotificationWebSocketBroadcast() {
+    List<Message<?>> sentMessages = new ArrayList<>();
+    MessageChannel recordingChannel =
+        (message, timeout) -> {
+          sentMessages.add(message);
+          return true;
+        };
+    SimpMessagingTemplate messagingTemplate = new SimpMessagingTemplate(recordingChannel);
+    NotificationService serviceWithWs =
+        new NotificationService(notificationRepository, userRepository, messagingTemplate);
+
+    serviceWithWs.createNotification(
+        testUser, testTicket, NotificationEventType.TICKET_CREATED, "Ticket Created", "Message");
+
+    assertEquals(1, notificationRepository.notifications.size());
+    assertEquals(2, sentMessages.size());
+    assertEquals(
+        "/user/testuser/queue/notifications",
+        sentMessages.get(0).getHeaders().get("simpDestination"));
+    assertEquals(
+        "/topic/notifications.100",
+        sentMessages.get(1).getHeaders().get("simpDestination"));
+    assertTrue(sentMessages.get(0).getPayload() instanceof NotificationResponse);
   }
 
   @Test

@@ -11,16 +11,32 @@ import com.enterprise.ticket.response.NotificationResponse;
 import com.enterprise.ticket.response.UnreadCountResponse;
 import java.time.Instant;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class NotificationService {
 
   private final NotificationRepository notificationRepository;
   private final UserRepository userRepository;
+  private final SimpMessagingTemplate messagingTemplate;
+
+  @Autowired
+  public NotificationService(
+      NotificationRepository notificationRepository,
+      UserRepository userRepository,
+      @Autowired(required = false) SimpMessagingTemplate messagingTemplate) {
+    this.notificationRepository = notificationRepository;
+    this.userRepository = userRepository;
+    this.messagingTemplate = messagingTemplate;
+  }
+
+  public NotificationService(
+      NotificationRepository notificationRepository, UserRepository userRepository) {
+    this(notificationRepository, userRepository, null);
+  }
 
   @Transactional
   public void createNotification(
@@ -37,7 +53,13 @@ public class NotificationService {
             .message(message)
             .isRead(false)
             .build();
-    notificationRepository.save(notification);
+    Notification saved = notificationRepository.save(notification);
+    if (messagingTemplate != null) {
+      NotificationResponse response = toResponse(saved);
+      messagingTemplate.convertAndSendToUser(
+          recipient.getUsername(), "/queue/notifications", response);
+      messagingTemplate.convertAndSend("/topic/notifications." + recipient.getId(), response);
+    }
   }
 
   @Transactional(readOnly = true)
