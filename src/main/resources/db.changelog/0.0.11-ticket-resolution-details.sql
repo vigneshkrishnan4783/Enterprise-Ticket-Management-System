@@ -1,0 +1,4 @@
+ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS resolution_code VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS resolution_notes TEXT,
+    ADD COLUMN IF NOT EXISTS resolved_by_id BIGINT REFERENCES users(id) ON DELETE SET NULL;

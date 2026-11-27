@@ -53,6 +53,9 @@ public class TicketResponse {
   private Boolean isSlaPaused;
   private Integer escalationLevel;
   private Boolean isEscalated;
+  private com.enterprise.ticket.constant.ResolutionCode resolutionCode;
+  private String resolutionNotes;
+  private String resolvedByUsername;
 
   private Instant createdAt;
   private Instant updatedAt;

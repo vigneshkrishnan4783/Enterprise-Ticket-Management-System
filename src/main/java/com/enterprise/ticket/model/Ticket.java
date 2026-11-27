@@ -145,4 +145,15 @@ public class Ticket extends BaseEntity {
   @Column(name = "is_escalated", nullable = false)
   @Builder.Default
   private Boolean isEscalated = false;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "resolution_code", length = 50)
+  private com.enterprise.ticket.constant.ResolutionCode resolutionCode;
+
+  @Column(name = "resolution_notes", columnDefinition = "TEXT")
+  private String resolutionNotes;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "resolved_by_id")
+  private User resolvedBy;
 }
