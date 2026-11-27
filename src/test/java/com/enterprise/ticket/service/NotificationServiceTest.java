@@ -24,6 +24,8 @@ import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -73,6 +75,28 @@ class NotificationServiceTest {
         null, testTicket, NotificationEventType.TICKET_CREATED, "Ticket Created", "Message");
 
     assertTrue(notificationRepository.notifications.isEmpty());
+  }
+
+  @Test
+  @DisplayName("createNotification should broadcast via WebSocket when messagingTemplate is present")
+  void testCreateNotificationWebSocketBroadcast() {
+    SimpMessagingTemplate messagingTemplate = Mockito.mock(SimpMessagingTemplate.class);
+    NotificationService serviceWithWs =
+        new NotificationService(notificationRepository, userRepository, messagingTemplate);
+
+    serviceWithWs.createNotification(
+        testUser, testTicket, NotificationEventType.TICKET_CREATED, "Ticket Created", "Message");
+
+    assertEquals(1, notificationRepository.notifications.size());
+    Mockito.verify(messagingTemplate)
+        .convertAndSendToUser(
+            org.mockito.ArgumentMatchers.eq("testuser"),
+            org.mockito.ArgumentMatchers.eq("/queue/notifications"),
+            org.mockito.ArgumentMatchers.any(NotificationResponse.class));
+    Mockito.verify(messagingTemplate)
+        .convertAndSend(
+            org.mockito.ArgumentMatchers.eq("/topic/notifications.100"),
+            org.mockito.ArgumentMatchers.any(NotificationResponse.class));
   }
 
   @Test

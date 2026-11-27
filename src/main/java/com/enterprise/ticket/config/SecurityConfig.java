@@ -18,14 +18,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
-  private final JwtAuthenticationFilter jwtAuthFilter;
-
-  public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
-    this.jwtAuthFilter = jwtAuthFilter;
-  }
-
   @Bean
-  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  public SecurityFilterChain securityFilterChain(
+      HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter) throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -33,6 +28,7 @@ public class SecurityConfig {
             auth ->
                 auth.requestMatchers(
                         "/api/v1/auth/**",
+                        "/ws/**",
                         "/actuator/**",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",

@@ -3,7 +3,6 @@ package com.enterprise.ticket.service;
 import com.enterprise.ticket.constant.RoleType;
 import com.enterprise.ticket.constant.UserType;
 import com.enterprise.ticket.exception.RestException;
-import com.enterprise.ticket.model.Role;
 import com.enterprise.ticket.model.Ticket;
 import com.enterprise.ticket.model.TicketAttachment;
 import com.enterprise.ticket.model.User;
@@ -23,7 +22,6 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -177,10 +175,10 @@ public class AttachmentService {
   }
 
   private void enforceTicketAccess(Ticket ticket, User caller, String action) {
-    Set<RoleType> roles =
-        caller.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
-
-    if (roles.contains(RoleType.ROLE_ADMIN)) {
+    boolean isAdmin =
+        caller.getRoles() != null
+            && caller.getRoles().stream().anyMatch(r -> r.getName() == RoleType.ROLE_ADMIN);
+    if (isAdmin) {
       return;
     }
 
@@ -207,8 +205,11 @@ public class AttachmentService {
         ticket.getAssignedTeam() != null
             && ticket.getAssignedTeam().getMembers().stream()
                 .anyMatch(m -> m.getId().equals(caller.getId()));
+    boolean isAgent =
+        caller.getRoles() != null
+            && caller.getRoles().stream().anyMatch(r -> r.getName() == RoleType.ROLE_AGENT);
 
-    if (!isReporter && !isAssignedAgent && !isAssignedTeamMember && !roles.contains(RoleType.ROLE_AGENT)) {
+    if (!isReporter && !isAssignedAgent && !isAssignedTeamMember && !isAgent) {
       throw RestException.forbidden(
           "Access denied: You are not authorized to " + action + " ticket " + ticket.getTicketNumber());
     }
