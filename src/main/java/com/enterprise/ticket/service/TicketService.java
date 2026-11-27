@@ -578,6 +578,10 @@ public class TicketService {
         .isSlaPaused(ticket.getIsSlaPaused())
         .escalationLevel(ticket.getEscalationLevel())
         .isEscalated(ticket.getIsEscalated())
+        .resolutionCode(ticket.getResolutionCode())
+        .resolutionNotes(ticket.getResolutionNotes())
+        .resolvedByUsername(
+            ticket.getResolvedBy() != null ? ticket.getResolvedBy().getUsername() : null)
         .createdAt(ticket.getCreatedAt())
         .updatedAt(ticket.getUpdatedAt())
         .build();

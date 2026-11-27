@@ -160,7 +160,20 @@ public class TicketTimelineService {
       throw RestException.badRequest("Ticket is already in status " + newStatus);
     }
 
+    if (newStatus == TicketStatus.RESOLVED
+        && (request.getResolutionNotes() == null || request.getResolutionNotes().isBlank())) {
+      throw RestException.badRequest(
+          "Resolution details (resolutionNotes) are required before resolving a ticket");
+    }
+
     ticket.setStatus(newStatus);
+    if (newStatus == TicketStatus.RESOLVED) {
+      ticket.setResolutionNotes(request.getResolutionNotes().trim());
+      if (request.getResolutionCode() != null) {
+        ticket.setResolutionCode(request.getResolutionCode());
+      }
+      ticket.setResolvedBy(caller);
+    }
     if ((newStatus == TicketStatus.RESOLVED || newStatus == TicketStatus.CLOSED) && ticket.getResolvedAt() == null) {
       ticket.setResolvedAt(java.time.Instant.now());
       if (ticket.getResolutionDueAt() != null && ticket.getResolvedAt().isAfter(ticket.getResolutionDueAt())) {
