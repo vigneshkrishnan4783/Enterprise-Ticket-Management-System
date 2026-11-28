@@ -1,15 +1,20 @@
 name: Enterprise Ticket Management System CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+      - develop
       - 'FR-*'
-      - 'feature/*'
+      - 'feature/**'
+      - 'fix/**'
+      - 'hotfix/**'
       - 'ci-cd-pipeline'
   pull_request:
     branches:
       - main
+      - develop
 
 permissions:
   contents: read
@@ -23,11 +28,11 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Set up Java 25
+      - name: Set up Java 25 (Temurin)
         uses: actions/setup-java@v4
         with:
           java-version: '25'
-          distribution: 'oracle'
+          distribution: 'temurin'
           cache: 'maven'
 
       - name: Verify JDK and Maven Environment
@@ -35,18 +40,32 @@ jobs:
           java -version
           mvn -v
 
-      - name: Compile and Validate Code Standards
-        run: mvn clean compile -B
-
       - name: Verify Code Style & Spotless Formatting
-        run: mvn spotless:check -B
+        run: mvn -B spotless:check
 
-      - name: Run Automated Unit Tests
-        run: mvn test -B
-
-      - name: Package Spring Boot Executable Artifact
-        run: mvn package -DskipTests=true -B
+      - name: Compile, Run Unit Tests & Package Artifact
+        run: mvn -B clean verify
 
       - name: Verify Liquibase Master Migration Integrity
         run: |
           test -f src/main/resources/db.changelog/db.changelog-master.yaml || exit 1
+
+      - name: Upload Executable JAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etms-backend-jar
+          path: target/*.jar
+          retention-days: 7
+
+  cd-container-build:
+    name: CD Container Image Verification
+    needs: build-test-verify
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Build Production Docker Image
+        run: docker build -t etms-backend:${{ github.sha }} .
